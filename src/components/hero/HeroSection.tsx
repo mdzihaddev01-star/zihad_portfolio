@@ -73,37 +73,28 @@ export function HeroSection({
 }: HeroSectionProps) {
   const { dir } = useLanguage();
   const settings = useSiteSettings(initialSettings);
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [spotlightPos, setSpotlightPos] = useState({ x: 50, y: 50 });
-  const [isHoveringCard, setIsHoveringCard] = useState(false);
   const [copiedContact, setCopiedContact] = useState<string | null>(null);
   const [activeDockItem, setActiveDockItem] = useState('hero');
   const [themeCss, setThemeCss] = useState(DEFAULT_THEME_CSS);
   const [isThemeEditorOpen, setIsThemeEditorOpen] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // Mouse move handler for 3D tilt and warm amber spotlight
+  // Track the cursor position for the card's warm amber spotlight.
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!cardRef.current) return;
     const rect = cardRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-
-    const rotateX = ((y - centerY) / centerY) * -10;
-    const rotateY = ((x - centerX) / centerX) * 12;
 
     const spotX = (x / rect.width) * 100;
     const spotY = (y / rect.height) * 100;
 
-    setTilt({ x: rotateX, y: rotateY });
     setSpotlightPos({ x: spotX, y: spotY });
   };
 
   const handleMouseLeave = () => {
-    setTilt({ x: 0, y: 0 });
-    setIsHoveringCard(false);
+    setSpotlightPos({ x: 50, y: 50 });
   };
 
   const scrollTo = (id: string) => {
@@ -142,9 +133,6 @@ export function HeroSection({
   const applyThemePreset = (preset: typeof THEME_PRESETS[number]) => {
     setThemeCss(`:root {\n  --accent-glow: ${preset.accent};\n  --primary-tint: ${preset.primary};\n  --border-neon: ${preset.border};\n}`);
   };
-
-  // Parallax offsets
-  const portraitOffset = { x: tilt.y * 0.3, y: tilt.x * 0.25 };
 
   // Floating Bottom Dock Navigation Items
   const dockItems = [
@@ -364,12 +352,9 @@ export function HeroSection({
             <div
               ref={cardRef}
               onMouseMove={handleMouseMove}
-              onMouseEnter={() => setIsHoveringCard(true)}
               onMouseLeave={handleMouseLeave}
               data-cursor="INSPECT"
               style={{
-                transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
-                transition: isHoveringCard ? 'transform 0.1s ease-out' : 'transform 0.5s ease-out',
                 borderColor: 'var(--hero-border-neon)',
                 boxShadow: '0 25px 60px rgba(0,0,0,0.85), 0 0 35px var(--hero-border-neon), inset 0 1px 0 rgba(255,255,255,0.08)',
               }}
@@ -403,14 +388,8 @@ export function HeroSection({
                   style={{ backgroundImage: `url('${portraitUrl}')` }}
                 />
 
-                {/* Primary High-Resolution Portrait with smooth Parallax */}
-                <div
-                  style={{
-                    transform: `translate3d(${portraitOffset.x}px, ${portraitOffset.y}px, 0)`,
-                    transition: isHoveringCard ? 'transform 0.1s ease-out' : 'transform 0.5s ease-out',
-                  }}
-                  className="w-full h-full"
-                >
+                {/* Primary High-Resolution Portrait */}
+                <div className="w-full h-full">
                   <img
                     src={portraitUrl}
                     alt={heroHeadline}

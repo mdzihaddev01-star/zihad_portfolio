@@ -1,6 +1,29 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import type { IconType } from 'react-icons';
+import {
+  SiCplusplus,
+  SiDocker,
+  SiExpress,
+  SiGit,
+  SiGithubactions,
+  SiGreensock,
+  SiJavascript,
+  SiLaravel,
+  SiMatterdotjs,
+  SiNextdotjs,
+  SiNodedotjs,
+  SiPhp,
+  SiPostgresql,
+  SiReact,
+  SiSupabase,
+  SiTailwindcss,
+  SiThreedotjs,
+  SiTypescript,
+} from 'react-icons/si';
+import { FaJava } from 'react-icons/fa6';
 import { useLanguage } from '@/lib/languageContext';
 import { DEFAULT_SKILLS, DEFAULT_EDUCATION } from '@/lib/supabase';
 import { soundFx } from '@/lib/soundFx';
@@ -9,37 +32,51 @@ import {
   Award, 
   MapPin, 
   Calendar, 
-  Sparkles, 
-  Atom, 
-  Code2, 
-  Palette, 
-  Server, 
-  Layers, 
-  Database, 
-  Cpu, 
-  Binary, 
-  GitBranch 
+  Sparkles,
 } from 'lucide-react';
 
 import { TechStackVisualizer } from '@/components/skills/TechStackVisualizer';
+
+const skillLogos: Record<string, { Icon: IconType; color: string }[]> = {
+  'Next.js & React 19': [
+    { Icon: SiNextdotjs, color: '#ffffff' },
+    { Icon: SiReact, color: '#61dafb' },
+  ],
+  'TypeScript & JavaScript': [
+    { Icon: SiTypescript, color: '#3178c6' },
+    { Icon: SiJavascript, color: '#f7df1e' },
+  ],
+  'Tailwind CSS & Obsidian UI': [{ Icon: SiTailwindcss, color: '#06b6d4' }],
+  'GSAP, Matter.js & Three.js': [
+    { Icon: SiGreensock, color: '#88ce02' },
+    { Icon: SiMatterdotjs, color: '#4b275f' },
+    { Icon: SiThreedotjs, color: '#ffffff' },
+  ],
+  'Node.js, Express & APIs': [
+    { Icon: SiNodedotjs, color: '#5fa04e' },
+    { Icon: SiExpress, color: '#ffffff' },
+  ],
+  'PHP & Modern Laravel': [
+    { Icon: SiPhp, color: '#777bb4' },
+    { Icon: SiLaravel, color: '#ff2d20' },
+  ],
+  'Supabase & PostgreSQL': [
+    { Icon: SiSupabase, color: '#3fcf8e' },
+    { Icon: SiPostgresql, color: '#4169e1' },
+  ],
+  'C & C++ Algorithmic Core': [{ Icon: SiCplusplus, color: '#00599c' }],
+  'Java & Object Oriented Design': [{ Icon: FaJava, color: '#f89820' }],
+  'Docker, Git & CI/CD Pipelines': [
+    { Icon: SiDocker, color: '#2496ed' },
+    { Icon: SiGit, color: '#f05032' },
+    { Icon: SiGithubactions, color: '#2088ff' },
+  ],
+};
 
 export function SkillsEducationSection() {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<'All' | 'Frontend' | 'Backend' | 'Core CS' | 'Tools & DevOps'>('All');
   const [activeView, setActiveView] = useState<'skills' | 'education' | 'architecture'>('skills');
-
-  const iconMap: Record<string, React.ElementType> = {
-    Atom,
-    Code2,
-    Palette,
-    Sparkles,
-    Server,
-    Layers,
-    Database,
-    Cpu,
-    Binary,
-    GitBranch,
-  };
 
   const filteredSkills = DEFAULT_SKILLS.filter(
     (s) => activeTab === 'All' || s.category === activeTab
@@ -162,16 +199,26 @@ export function SkillsEducationSection() {
             {/* Obsidian Cards Grid with Fine Borders & Warm Amber Progress */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5 max-h-[58vh] overflow-y-auto pr-1">
               {filteredSkills.map((skill) => {
-                const Icon = iconMap[skill.icon || 'Code2'] || Code2;
+                const logos = skillLogos[skill.name] ?? [];
 
                 return (
-                  <div
+                  <motion.div
                     key={skill.id}
                     className="rounded-2xl p-4 bg-white/[0.035] border border-white/10 transition-all duration-300 transform hover:-translate-y-1 hover:border-[#f5a623]/45 group relative overflow-hidden backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true, amount: 0.2 }}
                   >
                     <div className="flex items-center justify-between mb-3">
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center p-2 bg-[#f5a623]/10 text-[#f5a623] border border-[#f5a623]/25">
-                        <Icon className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                      <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.04] border border-white/10 group-hover:border-amber-400/40 group-hover:shadow-[0_0_15px_rgba(245,158,11,0.2)] transition-all">
+                        {logos.map(({ Icon, color }, index) => (
+                          <Icon
+                            key={`${skill.id}-${index}`}
+                            aria-hidden="true"
+                            className="w-7 h-7 shrink-0"
+                            style={{ color }}
+                          />
+                        ))}
                       </div>
                       <span className="text-[11px] font-mono font-semibold text-zinc-400">
                         {skill.proficiency}%
@@ -188,15 +235,19 @@ export function SkillsEducationSection() {
 
                     {/* Warm Amber Progress Bar */}
                     <div className="w-full bg-black/60 rounded-full h-1.5 overflow-hidden border border-white/10">
-                      <div
-                        className="h-full rounded-full transition-all duration-700 bg-gradient-to-r from-[#e58a3c] to-[#f5a623]"
+                      <motion.div
+                        className="h-full rounded-full bg-gradient-to-r from-[#e58a3c] to-[#f5a623]"
+                        variants={{
+                          hidden: { width: 0 },
+                          visible: { width: `${skill.proficiency}%` },
+                        }}
+                        transition={{ duration: 0.8, ease: 'easeOut' }}
                         style={{
-                          width: `${skill.proficiency}%`,
                           boxShadow: '0 0 10px rgba(245, 166, 35, 0.45)',
                         }}
                       />
                     </div>
-                  </div>
+                  </motion.div>
                 );
               })}
             </div>

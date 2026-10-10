@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { ThemeProvider } from '@/lib/themeProvider';
 import { LanguageProvider } from '@/lib/languageContext';
+import { SmoothScroll } from '@/components/ui/SmoothScroll';
 
 export const metadata: Metadata = {
   title: 'MOHAMMAD ZIHAD — 02 / CINEMATIC DEVELOPER HERO',
@@ -51,7 +52,7 @@ export default function RootLayout({
       <body className="antialiased bg-[#0c0c0e] text-[#F4F1E9] selection:bg-[#f5a623]/25 selection:text-[#ffd166]">
         <ThemeProvider attribute="class" defaultTheme="dark">
           <LanguageProvider>
-            {children}
+            <SmoothScroll>{children}</SmoothScroll>
           </LanguageProvider>
         </ThemeProvider>
       </body>
