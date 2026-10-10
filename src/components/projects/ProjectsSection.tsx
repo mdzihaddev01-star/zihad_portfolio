@@ -2,22 +2,18 @@
 
 import React, { useState } from 'react';
 import { useEffect } from 'react';
-import { useLanguage } from '@/lib/languageContext';
+import { motion } from 'framer-motion';
 import { DEFAULT_PROJECTS, isSupabaseConfigured, supabase } from '@/lib/supabase';
 import type { Project } from '@/types/portfolio';
 import { soundFx } from '@/lib/soundFx';
 import { 
   ExternalLink, 
   Code2, 
-  Sparkles, 
   Layers, 
   X, 
   Maximize2, 
-  FileText, 
-  CheckCircle2, 
   Cpu, 
   ArrowRight,
-  Filter
 } from 'lucide-react';
 
 function GithubIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -102,6 +98,12 @@ export function playSynthesizerTone(freq = 440, type: OscillatorType = 'triangle
 }`
 };
 
+const PROJECT_HOVER_STYLES = [
+  'hover:border-amber-400/60 hover:shadow-[0_10px_40px_rgba(245,158,11,0.15)]',
+  'hover:border-emerald-400/60 hover:shadow-[0_10px_40px_rgba(16,185,129,0.15)]',
+  'hover:border-violet-400/60 hover:shadow-[0_10px_40px_rgba(139,92,246,0.15)]',
+] as const;
+
 const PROJECT_FALLBACK_IMAGE = '/images/mohammad_zihad.jpg';
 
 function normalizeProject(project: Partial<Project>, index: number): Project {
@@ -127,7 +129,6 @@ function normalizeProject(project: Partial<Project>, index: number): Project {
 }
 
 export function ProjectsSection() {
-  const { t } = useLanguage();
   const [projects, setProjects] = useState<Project[]>(DEFAULT_PROJECTS);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const [projectLoadError, setProjectLoadError] = useState('');
@@ -264,7 +265,7 @@ export function ProjectsSection() {
 
         {/* Projects Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredProjects.map((project) => {
+          {filteredProjects.map((project, index) => {
             const isCodeMode = Boolean(codeInspectorMode[project.id]);
             const imagesList = project.images?.filter(Boolean) ?? [];
             const activeIdx = activeThumbnailIndex[project.id] ?? 0;
@@ -272,17 +273,19 @@ export function ProjectsSection() {
             const snippet = PROJECT_CODE_SNIPPETS[project.id] || `// Production Architecture for ${project.title}`;
 
             return (
-              <div
+              <motion.div
                 key={project.id}
                 onClick={() => {
                   soundFx.playBlip();
                   setSelectedCaseStudy(project);
                 }}
                 data-cursor="VIEW"
-                className="obsidian-card holographic-card rounded-3xl border border-white/10 hover:border-[#A855F7]/45 flex flex-col overflow-hidden group relative cursor-pointer transition-all shadow-lg"
+                whileHover={{ y: -10 }}
+                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                className={`rounded-3xl bg-white/[0.035] border border-white/10 flex flex-col overflow-hidden group relative cursor-pointer transition-[border-color,box-shadow] duration-500 ${PROJECT_HOVER_STYLES[index % PROJECT_HOVER_STYLES.length]}`}
               >
                 {/* Top Image or Code Inspector Canvas */}
-                <div className="relative h-52 sm:h-60 w-full overflow-hidden bg-[#09080E]">
+                <div className="relative h-52 sm:h-60 w-full overflow-hidden">
                   {isCodeMode ? (
                     /* Illustrative Project Architecture Code Inspector */
                     <div className="absolute inset-0 bg-[#09080E] p-4 font-mono text-xs text-[#9E9AA8] overflow-y-auto leading-relaxed select-text">
@@ -300,39 +303,37 @@ export function ProjectsSection() {
                       <img
                         src={currentImg}
                         alt={project.title}
-                        className="w-full h-full object-cover object-center grayscale contrast-110 group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700 ease-out"
+                        className="w-full h-full object-cover object-center transition-transform duration-500 ease-[0.16,1,0.3,1] group-hover:-translate-y-2.5 group-hover:scale-105"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#12101A] via-transparent to-transparent opacity-85" />
-                      
-                      {/* Lightbox Trigger Icon */}
+                    </>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between px-5 pt-3">
+                  <span className="text-[10px] font-mono font-bold text-[#ffd166] uppercase">
+                    {project.category}
+                  </span>
+                  <div className="flex items-center gap-3">
+                    {!isCodeMode && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           soundFx.playBlip();
                           setLightboxImage(currentImg);
                         }}
-                        className="absolute top-3 right-3 p-2 rounded-xl bg-black/70 backdrop-blur-md text-[#F4F1E9] hover:text-[#C084FC] border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        className="text-xs text-zinc-300 hover:text-white transition-colors cursor-pointer"
                         title="View Fullscreen"
                       >
-                        <Maximize2 className="w-3.5 h-3.5" />
+                        <Maximize2 className="w-4 h-4" />
                       </button>
-                    </>
-                  )}
-
-                  {/* Code Inspector Toggle Button */}
-                  <button
-                    onClick={(e) => toggleCodeInspector(project.id, e)}
-                    className="absolute bottom-3 right-3 px-3 py-1.5 rounded-xl bg-[#12101A]/95 backdrop-blur-md border border-[#A855F7]/30 text-[10px] font-mono font-bold text-[#F4F1E9] hover:text-[#C084FC] flex items-center gap-1.5 transition-colors cursor-pointer z-10 shadow-md"
-                  >
-                    <Code2 className="w-3.5 h-3.5 text-[#A855F7]" />
-                    <span>{isCodeMode ? 'Show Visual' : 'Code Inspector'}</span>
-                  </button>
-
-                  {/* Category Pill */}
-                  <div className="absolute top-3 left-3 z-10">
-                    <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-[#0c0c0e]/90 backdrop-blur-md text-[#ffd166] border border-[#f5a623]/30 uppercase">
-                      {project.category}
-                    </span>
+                    )}
+                    <button
+                      onClick={(e) => toggleCodeInspector(project.id, e)}
+                      className="text-[10px] font-mono font-bold text-zinc-300 hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Code2 className="w-3.5 h-3.5 text-[#A855F7]" />
+                      <span>{isCodeMode ? 'Show Visual' : 'Code Inspector'}</span>
+                    </button>
                   </div>
                 </div>
 
@@ -344,7 +345,7 @@ export function ProjectsSection() {
                         key={idx}
                         onClick={(e) => selectThumbnail(project.id, idx, e)}
                         className={`w-12 h-8 rounded-lg overflow-hidden border transition-all cursor-pointer ${
-                          activeIdx === idx ? 'border-[#f5a623] ring-1 ring-[#f5a623]' : 'border-white/10 opacity-60 hover:opacity-100'
+                          activeIdx === idx ? 'border-[#f5a623] ring-1 ring-[#f5a623]' : 'border-white/10'
                         }`}
                       >
                         <img src={thumb} alt="thumbnail" className="w-full h-full object-cover" />
@@ -411,7 +412,7 @@ export function ProjectsSection() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>
@@ -447,7 +448,7 @@ export function ProjectsSection() {
             {/* Header */}
             <div>
               <span className="text-xs font-mono font-bold text-[#f5a623] uppercase tracking-wider block mb-1">
-                {selectedCaseStudy.category} // CASE STUDY
+                {selectedCaseStudy.category}{' // CASE STUDY'}
               </span>
               <h2 className="text-2xl sm:text-3xl font-black text-[#F4F1E9] font-display">
                 {selectedCaseStudy.title}
@@ -455,7 +456,7 @@ export function ProjectsSection() {
             </div>
 
             {/* Cover image preview */}
-            <div className="rounded-2xl overflow-hidden border border-white/10 h-64 sm:h-72 w-full bg-black">
+            <div className="rounded-2xl overflow-hidden border border-white/10 h-64 sm:h-72 w-full">
               <img
                 src={selectedCaseStudy.images?.[0] || selectedCaseStudy.image_url || PROJECT_FALLBACK_IMAGE}
                 alt={selectedCaseStudy.title}
@@ -553,7 +554,7 @@ export function ProjectsSection() {
           <img
             src={lightboxImage}
             alt="Fullscreen Preview"
-            className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl"
+            className="max-w-full max-h-[90vh] object-contain rounded-2xl"
           />
         </div>
       )}

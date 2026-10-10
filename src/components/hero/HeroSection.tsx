@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { useLanguage } from '@/lib/languageContext';
 import { soundFx } from '@/lib/soundFx';
 import { useSiteSettings } from '@/lib/useSiteSettings';
@@ -12,7 +13,6 @@ import {
   Terminal, 
   Sparkles, 
   Code2, 
-  Cpu,
   Mail,
   MapPin,
   Phone,
@@ -74,6 +74,7 @@ export function HeroSection({
   const { dir } = useLanguage();
   const settings = useSiteSettings(initialSettings);
   const [spotlightPos, setSpotlightPos] = useState({ x: 50, y: 50 });
+  const [isPortraitHovered, setIsPortraitHovered] = useState(false);
   const [copiedContact, setCopiedContact] = useState<string | null>(null);
   const [activeDockItem, setActiveDockItem] = useState('hero');
   const [themeCss, setThemeCss] = useState(DEFAULT_THEME_CSS);
@@ -356,18 +357,9 @@ export function HeroSection({
               data-cursor="INSPECT"
               style={{
                 borderColor: 'var(--hero-border-neon)',
-                boxShadow: '0 25px 60px rgba(0,0,0,0.85), 0 0 35px var(--hero-border-neon), inset 0 1px 0 rgba(255,255,255,0.08)',
               }}
               className="w-full rounded-3xl p-3 sm:p-4 bg-white/[0.03] border border-white/10 relative group cursor-pointer transition-all z-10 backdrop-blur-xl holographic-card"
             >
-              {/* Cursor Spotlight Effect */}
-              <div
-                style={{
-                  background: `radial-gradient(circle at ${spotlightPos.x}% ${spotlightPos.y}%, color-mix(in srgb, var(--hero-accent) 22%, transparent) 0%, color-mix(in srgb, var(--hero-primary-tint) 8%, transparent) 40%, transparent 70%)`,
-                }}
-                className="absolute inset-0 rounded-3xl pointer-events-none transition-opacity duration-300 z-20"
-              />
-
               {/* Card Header Pill */}
               <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-white/10 font-mono text-[11px] text-zinc-400 relative z-20">
                 <div className="flex items-center gap-2">
@@ -379,48 +371,50 @@ export function HeroSection({
                 </span>
               </div>
 
-              {/* Full-Resolution Cinematic Portrait Container */}
-              <div className="relative rounded-2xl overflow-hidden aspect-[3/4] bg-[#0c0c0e] border border-white/10 shadow-[inset_0_0_30px_rgba(0,0,0,0.95)]">
-                
-                {/* Secondary blurred ambient layer */}
-                <div 
-                  className="absolute inset-0 bg-cover bg-center filter blur-xl opacity-20 scale-110 pointer-events-none"
-                  style={{ backgroundImage: `url('${portraitUrl}')` }}
-                />
-
-                {/* Primary High-Resolution Portrait */}
-                <div className="w-full h-full">
+              {/* Natural-color portrait with a responsive accent glow */}
+              <motion.div
+                onMouseEnter={() => setIsPortraitHovered(true)}
+                onMouseLeave={() => {
+                  setIsPortraitHovered(false);
+                  handleMouseLeave();
+                }}
+                onMouseMove={handleMouseMove}
+                whileHover={{ scale: 1.015, rotateY: 1 }}
+                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                style={{
+                  borderColor: isPortraitHovered ? 'var(--hero-border-neon)' : 'rgba(255,255,255,0.1)',
+                  boxShadow: isPortraitHovered
+                    ? `0 0 32px color-mix(in srgb, var(--hero-accent) 28%, transparent)`
+                    : 'none',
+                  transformPerspective: 900,
+                }}
+                className="relative rounded-2xl overflow-hidden aspect-[3/4] border transition-[border-color,box-shadow] duration-500 group/portrait"
+              >
                   <img
                     src={portraitUrl}
                     alt={heroHeadline}
-                    className="relative z-10 w-full h-full object-cover object-center grayscale contrast-110 brightness-95 group-hover:grayscale-0 group-hover:contrast-105 group-hover:brightness-100 group-hover:scale-[1.03] transition-all duration-700 ease-out"
+                    className="relative z-10 w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover/portrait:scale-105"
                   />
-                </div>
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-0 z-10 pointer-events-none opacity-0 group-hover/portrait:opacity-100 transition-opacity duration-300"
+                  style={{
+                    background: `radial-gradient(circle at ${spotlightPos.x}% ${spotlightPos.y}%, rgba(255,255,255,0.16), transparent 45%)`,
+                    mixBlendMode: 'screen',
+                  }}
+                />
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-y-0 left-0 z-20 w-1/3 -translate-x-full skew-x-[-20deg] bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover/portrait:translate-x-[450%] transition-transform duration-1000 ease-out pointer-events-none"
+                />
+              </motion.div>
 
-                {/* Seamless Smoky Fade Gradient at bottom edge */}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0c0c0e] via-[#0c0c0e]/30 to-transparent opacity-90 z-10 pointer-events-none" />
-                
-                {/* Amber Rim-Light Edge Halo */}
-                <div style={{ borderColor: 'var(--hero-border-neon)', boxShadow: 'inset 0 0 20px var(--hero-border-neon)' }} className="absolute inset-0 border rounded-2xl pointer-events-none z-15 transition-colors" />
-
-                {/* Top Location Chip */}
-                <div className="absolute top-3 left-3 z-20">
-                  <span className="text-[9px] font-mono tracking-widest text-white/90 bg-black/80 backdrop-blur-md px-2.5 py-1 rounded-full border border-[#f5a623]/30 uppercase shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
-                    DHAKA, BANGLADESH · 23.81° N
-                  </span>
-                </div>
-
-                {/* Bottom Technical Status Chip */}
-                <div className="absolute bottom-3 inset-x-3 z-20 flex items-center justify-between bg-[#141418]/90 backdrop-blur-md rounded-xl p-2.5 border border-white/10 font-mono text-[10px]">
-                  <div className="flex items-center gap-1.5 text-white">
-                    <Cpu className="w-3.5 h-3.5 text-[#f5a623]" />
-                    <span>FULL-STACK ARCHITECT</span>
-                  </div>
-                  <span className="text-[#10b981] font-bold flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" />
-                    ONLINE
-                  </span>
-                </div>
+              <div className="mt-2 flex items-center justify-between font-mono text-[10px] text-zinc-300">
+                <span>DHAKA, BANGLADESH · 23.81° N</span>
+                <span className="text-[#10b981] font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" />
+                  ONLINE
+                </span>
               </div>
 
               {/* Bottom Card Footer */}
