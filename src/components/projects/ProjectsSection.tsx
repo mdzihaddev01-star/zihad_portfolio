@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useEffect } from 'react';
 import { useLanguage } from '@/lib/languageContext';
-import { DEFAULT_PROJECTS } from '@/lib/supabase';
-import { Project } from '@/types/portfolio';
+import { DEFAULT_PROJECTS, isSupabaseConfigured, supabase } from '@/lib/supabase';
+import type { Project } from '@/types/portfolio';
 import { soundFx } from '@/lib/soundFx';
 import { 
   ExternalLink, 
@@ -103,6 +104,9 @@ export function playSynthesizerTone(freq = 440, type: OscillatorType = 'triangle
 
 export function ProjectsSection() {
   const { t } = useLanguage();
+  const [projects, setProjects] = useState<Project[]>(isSupabaseConfigured ? [] : DEFAULT_PROJECTS);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(isSupabaseConfigured);
+  const [projectLoadError, setProjectLoadError] = useState('');
   const [activeFilter, setActiveFilter] = useState<'All' | 'WebGL' | 'AI' | 'Fintech' | 'Creative'>('All');
   const [codeInspectorMode, setCodeInspectorMode] = useState<Record<string, boolean>>({});
   const [activeThumbnailIndex, setActiveThumbnailIndex] = useState<Record<string, number>>({});
@@ -117,7 +121,44 @@ export function ProjectsSection() {
     { id: 'Creative', label: 'Creative Web' },
   ] as const;
 
-  const filteredProjects = DEFAULT_PROJECTS.filter((p) => {
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) return;
+    const client = supabase;
+    let active = true;
+
+    const loadProjects = async () => {
+      const { data, error } = await client
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!active) return;
+      if (error) {
+        console.error('Homepage projects fetch error:', error);
+        setProjectLoadError(error.message);
+      } else {
+        setProjects((data ?? []) as Project[]);
+        setProjectLoadError('');
+      }
+      setIsLoadingProjects(false);
+    };
+
+    void loadProjects();
+
+    const channel = client
+      .channel('homepage-projects-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, () => {
+        void loadProjects();
+      })
+      .subscribe();
+
+    return () => {
+      active = false;
+      void client.removeChannel(channel);
+    };
+  }, []);
+
+  const filteredProjects = projects.filter((p) => {
     if (activeFilter === 'All') return true;
     if (activeFilter === 'WebGL') return p.category.includes('WebGL') || p.category.includes('Spatial');
     if (activeFilter === 'AI') return p.category.includes('AI');
@@ -337,6 +378,19 @@ export function ProjectsSection() {
             );
           })}
         </div>
+        {isLoadingProjects && (
+          <p className="py-8 text-center text-sm font-mono text-[#A4A7AE]">Loading projects...</p>
+        )}
+        {!isLoadingProjects && !projectLoadError && filteredProjects.length === 0 && (
+          <p className="py-8 text-center text-sm font-mono text-[#A4A7AE]">
+            {projects.length === 0 ? 'No projects published yet.' : 'No projects match this filter.'}
+          </p>
+        )}
+        {projectLoadError && (
+          <p role="alert" className="py-4 text-center text-sm font-mono text-rose-300">
+            Projects could not be loaded: {projectLoadError}
+          </p>
+        )}
       </div>
 
       {/* ------------------------------------------------------------------- */}

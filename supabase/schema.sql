@@ -102,6 +102,21 @@ CREATE TABLE IF NOT EXISTS public.projects (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime')
+       AND NOT EXISTS (
+           SELECT 1
+           FROM pg_publication_tables
+           WHERE pubname = 'supabase_realtime'
+             AND schemaname = 'public'
+             AND tablename = 'projects'
+       ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.projects;
+    END IF;
+END;
+$$;
+
 -- Table 3: Arsenal Skills
 CREATE TABLE IF NOT EXISTS public.skills (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

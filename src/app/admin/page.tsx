@@ -96,7 +96,7 @@ export default function AdminPage({
     client_satisfaction: 99.8,
     code_commits: 1450,
   });
-  const [projects, setProjects] = useState<Project[]>(DEFAULT_PROJECTS);
+  const [projects, setProjects] = useState<Project[]>(isSupabaseConfigured ? [] : DEFAULT_PROJECTS);
   const [projectSaveError, setProjectSaveError] = useState('');
   const [isSavingProject, setIsSavingProject] = useState(false);
   const [skills, setSkills] = useState<Skill[]>(DEFAULT_SKILLS);
@@ -566,7 +566,18 @@ export default function AdminPage({
       if (error) throw error;
       if (!project) throw new Error('Supabase did not return the inserted project row.');
 
-      setProjects((current) => [project as Project, ...current]);
+      const { data: refreshedProjects, error: refreshError } = await supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (refreshError) {
+        console.error('Supabase projects refresh error:', refreshError);
+        setProjects((current) => [project as Project, ...current]);
+        window.alert(`Project saved, but the list could not be refreshed: ${refreshError.message}`);
+      } else {
+        setProjects((refreshedProjects ?? []) as Project[]);
+      }
     } catch (error) {
       console.error('Supabase project insert error:', error);
       const message = error instanceof Error ? error.message : String(error);
