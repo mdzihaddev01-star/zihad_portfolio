@@ -106,6 +106,23 @@ async function fetchEducation(): Promise<Education[]> {
   return (data ?? []) as Education[];
 }
 
+async function fetchCertificates(): Promise<Certificate[]> {
+  if (!isSupabaseConfigured || !supabase) {
+    throw new Error('Supabase is not configured.');
+  }
+
+  const { data, error } = await supabase
+    .from('certificates')
+    .select('*')
+    .order('order_index', { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []).map((certificate) => ({
+    ...certificate,
+    issue_date: certificate.date || certificate.issue_date,
+  })) as Certificate[];
+}
+
 export default function AdminPage({ 
   defaultTab = 'overview' 
 }: { 
@@ -137,11 +154,22 @@ export default function AdminPage({
   const [educationForm, setEducationForm] = useState({
     degree: '',
     institution: '',
-    years: '',
+    duration: '',
     description: '',
     order_index: 1,
   });
-  const [certificates, setCertificates] = useState<Certificate[]>(DEFAULT_CERTIFICATES);
+  const [certificates, setCertificates] = useState<Certificate[]>(isSupabaseConfigured ? [] : DEFAULT_CERTIFICATES);
+  const [isCertificateFormOpen, setIsCertificateFormOpen] = useState(false);
+  const [isSavingCertificate, setIsSavingCertificate] = useState(false);
+  const [certificateError, setCertificateError] = useState('');
+  const [certificateForm, setCertificateForm] = useState({
+    title: '',
+    issuer: '',
+    issue_year: '',
+    credential_id: '',
+    credential_url: '',
+    order_index: 1,
+  });
   const [meetings, setMeetings] = useState<Meeting[]>(DEFAULT_MEETINGS);
   const [testimonials, setTestimonials] = useState<Testimonial[]>(DEFAULT_TESTIMONIALS);
   const [testimonialFilter, setTestimonialFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
@@ -273,6 +301,13 @@ export default function AdminPage({
           console.error('Supabase education fetch error:', error);
           setEducationError(error.message || JSON.stringify(error));
           setEducation(DEFAULT_EDUCATION);
+        });
+
+      void fetchCertificates()
+        .then(setCertificates)
+        .catch((error: { message?: string }) => {
+          console.error('Supabase certificates fetch error:', error);
+          setCertificateError(error.message || JSON.stringify(error));
         });
     } else {
       const localProjects = localStorage.getItem('zihad_cms_projects');
@@ -773,7 +808,7 @@ export default function AdminPage({
     setEducationForm({
       degree: '',
       institution: '',
-      years: '',
+      duration: '',
       description: '',
       order_index: nextOrderIndex,
     });
@@ -785,7 +820,7 @@ export default function AdminPage({
     setEducationForm({
       degree: item.degree || '',
       institution: item.institution || '',
-      years: [item.start_year, item.end_year].filter(Boolean).join(' - '),
+      duration: item.duration || [item.start_year, item.end_year].filter(Boolean).join(' - '),
       description: item.description || '',
       order_index: item.order_index ?? education.length + 1,
     });
@@ -801,19 +836,17 @@ export default function AdminPage({
       return;
     }
 
-    const years = educationForm.years.split(/\s*(?:-|[\u2013\u2014]|to)\s*/i).filter(Boolean);
-    if (years.length < 2) {
-      setEducationError('Enter a start and end year, for example: 2024 - 2026.');
+    if (!educationForm.duration.trim()) {
+      setEducationError('Enter a duration, for example: 2024 - 2026.');
       return;
     }
 
     const payload = {
       degree: educationForm.degree.trim(),
       institution: educationForm.institution.trim(),
-      start_year: years[0].trim(),
-      end_year: years[years.length - 1].trim(),
+      duration: educationForm.duration.trim(),
       description: educationForm.description.trim(),
-      order_index: Number(educationForm.order_index),
+      order_index: Number(educationForm.order_index) || 0,
     };
 
     setIsSavingEducation(true);
@@ -852,6 +885,89 @@ export default function AdminPage({
       if (editingEducationId === id) resetEducationForm(refreshedEducation.length + 1);
     } catch (error) {
       console.error('Supabase education delete error:', error);
+      const errorObject = error && typeof error === 'object'
+        ? error as { message?: string; details?: string }
+        : null;
+      window.alert(errorObject?.message || errorObject?.details || JSON.stringify(error) || String(error));
+    }
+  };
+
+  const resetCertificateForm = () => {
+    setCertificateForm({
+      title: '',
+      issuer: '',
+      issue_year: '',
+      credential_id: '',
+      credential_url: '',
+      order_index: certificates.length + 1,
+    });
+    setCertificateError('');
+  };
+
+  const createCertificate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSavingCertificate) return;
+    setCertificateError('');
+
+    if (!isSupabaseConfigured || !supabase) {
+      setCertificateError('Supabase is not configured. Certificate was not saved.');
+      return;
+    }
+
+    const newCert = {
+      title: certificateForm.title.trim(),
+      issuer: certificateForm.issuer.trim(),
+      date: certificateForm.issue_year.trim(),
+      credential_id: certificateForm.credential_id.trim() || null,
+      credential_url: certificateForm.credential_url.trim() || null,
+      order_index: Number(certificateForm.order_index) || 0,
+    };
+
+    setIsSavingCertificate(true);
+    try {
+      const { error } = await supabase.from('certificates').insert([newCert]);
+      if (error) throw error;
+
+      setIsCertificateFormOpen(false);
+      resetCertificateForm();
+      try {
+        setCertificates(await fetchCertificates());
+      } catch (refreshError) {
+        console.error('Supabase certificates refresh error:', refreshError);
+        const message = refreshError instanceof Error ? refreshError.message : JSON.stringify(refreshError);
+        setCertificateError(`Certificate saved, but the list could not be refreshed: ${message}`);
+      }
+      window.alert('Certificate added successfully.');
+    } catch (error) {
+      console.error('Supabase certificate insert error:', error);
+      const errorObject = error && typeof error === 'object'
+        ? error as { message?: string; details?: string }
+        : null;
+      setCertificateError(errorObject?.message || errorObject?.details || JSON.stringify(error) || String(error));
+    } finally {
+      setIsSavingCertificate(false);
+    }
+  };
+
+  const deleteCertificate = async (id: string) => {
+    if (!isSupabaseConfigured || !supabase) {
+      window.alert('Supabase is not configured. Certificate was not deleted.');
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('certificates').delete().eq('id', id);
+      if (error) throw error;
+      setCertificates((current) => current.filter((certificate) => certificate.id !== id));
+      try {
+        setCertificates(await fetchCertificates());
+      } catch (refreshError) {
+        console.error('Supabase certificates refresh error after delete:', refreshError);
+        const message = refreshError instanceof Error ? refreshError.message : JSON.stringify(refreshError);
+        window.alert(`Certificate deleted, but the list could not be refreshed: ${message}`);
+      }
+    } catch (error) {
+      console.error('Supabase certificate delete error:', error);
       const errorObject = error && typeof error === 'object'
         ? error as { message?: string; details?: string }
         : null;
@@ -2076,7 +2192,7 @@ export default function AdminPage({
                     <div className="min-w-0">
                       <h4 className="text-sm font-bold text-white">{item.degree}</h4>
                       <p className="text-xs text-amber-300 mt-1">{item.institution}</p>
-                      <p className="text-[11px] text-zinc-400 font-mono mt-1">{item.start_year} - {item.end_year} · Order {item.order_index ?? 0}</p>
+                      <p className="text-[11px] text-zinc-400 font-mono mt-1">{item.duration || [item.start_year, item.end_year].filter(Boolean).join(' - ')} · Order {item.order_index ?? 0}</p>
                       {item.description && <p className="text-xs text-zinc-400 mt-2">{item.description}</p>}
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
@@ -2142,8 +2258,8 @@ export default function AdminPage({
                   Duration / Years
                   <input
                     required
-                    value={educationForm.years}
-                    onChange={(e) => setEducationForm((form) => ({ ...form, years: e.target.value }))}
+                    value={educationForm.duration}
+                    onChange={(e) => setEducationForm((form) => ({ ...form, duration: e.target.value }))}
                     placeholder="2024 - 2026"
                     className="mt-1.5 w-full rounded-xl border border-zinc-800 bg-[#0c0c0e] p-3 text-white"
                   />
@@ -2183,27 +2299,136 @@ export default function AdminPage({
         {/* TAB: CERTIFICATES MANAGEMENT */}
         {/* ------------------------------------------------------------------- */}
         {activeTab === 'certificates' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {certificates.map((cert) => (
-              <div
-                key={cert.id}
-                className="obsidian-card rounded-2xl p-5 border border-zinc-800 flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400">
-                      {cert.issue_date}
-                    </span>
-                    <Award className="w-4 h-4 text-amber-400" />
-                  </div>
-                  <h3 className="font-bold text-sm text-white mb-1">{cert.title}</h3>
-                  <p className="text-xs text-zinc-400 mb-2">{cert.issuer}</p>
-                </div>
-                <div className="text-[10px] font-mono text-amber-400 pt-2 border-t border-zinc-800/80">
-                  ID: {cert.credential_id}
-                </div>
+          <div className="space-y-5">
+            <div className="obsidian-card rounded-3xl p-5 border border-zinc-800 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-white uppercase font-mono">Certificates & Credentials</h3>
+                <p className="mt-1 text-xs text-zinc-400 font-mono">{certificates.length} certificates</p>
               </div>
-            ))}
+              <button
+                type="button"
+                onClick={() => {
+                  resetCertificateForm();
+                  setIsCertificateFormOpen((open) => !open);
+                }}
+                className="flex items-center justify-center gap-2 rounded-xl bg-amber-400 px-4 py-2.5 text-xs font-bold text-black hover:bg-amber-300"
+              >
+                <Plus className="h-4 w-4" />
+                <span>{isCertificateFormOpen ? 'Close Form' : 'Add Certificate'}</span>
+              </button>
+            </div>
+
+            {certificateError && (
+              <p role="alert" className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-300 font-mono">
+                {certificateError}
+              </p>
+            )}
+
+            {isCertificateFormOpen && (
+              <form onSubmit={createCertificate} className="obsidian-card rounded-3xl p-6 border border-zinc-800 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <label className="block text-xs text-zinc-400 font-mono">
+                  Certificate Title
+                  <input
+                    required
+                    value={certificateForm.title}
+                    onChange={(e) => setCertificateForm((form) => ({ ...form, title: e.target.value }))}
+                    placeholder="Full-Stack Web Development Masterclass"
+                    className="mt-1.5 w-full rounded-xl border border-zinc-800 bg-[#0c0c0e] p-3 text-white"
+                  />
+                </label>
+                <label className="block text-xs text-zinc-400 font-mono">
+                  Issuer / Organization
+                  <input
+                    required
+                    value={certificateForm.issuer}
+                    onChange={(e) => setCertificateForm((form) => ({ ...form, issuer: e.target.value }))}
+                    placeholder="Ostad, Coursera, Programming Hero"
+                    className="mt-1.5 w-full rounded-xl border border-zinc-800 bg-[#0c0c0e] p-3 text-white"
+                  />
+                </label>
+                <label className="block text-xs text-zinc-400 font-mono">
+                  Issue Year
+                  <input
+                    required
+                    value={certificateForm.issue_year}
+                    onChange={(e) => setCertificateForm((form) => ({ ...form, issue_year: e.target.value }))}
+                    placeholder="2026"
+                    className="mt-1.5 w-full rounded-xl border border-zinc-800 bg-[#0c0c0e] p-3 text-white"
+                  />
+                </label>
+                <label className="block text-xs text-zinc-400 font-mono">
+                  Order Index
+                  <input
+                    type="number"
+                    min="0"
+                    value={certificateForm.order_index}
+                    onChange={(e) => setCertificateForm((form) => ({ ...form, order_index: Number(e.target.value) }))}
+                    className="mt-1.5 w-full rounded-xl border border-zinc-800 bg-[#0c0c0e] p-3 text-white"
+                  />
+                </label>
+                <label className="block text-xs text-zinc-400 font-mono">
+                  Credential ID / Verification Code
+                  <input
+                    value={certificateForm.credential_id}
+                    onChange={(e) => setCertificateForm((form) => ({ ...form, credential_id: e.target.value }))}
+                    placeholder="OSTAD-FL-2026"
+                    className="mt-1.5 w-full rounded-xl border border-zinc-800 bg-[#0c0c0e] p-3 text-white"
+                  />
+                </label>
+                <label className="block text-xs text-zinc-400 font-mono">
+                  Credential / Verification URL
+                  <input
+                    type="url"
+                    value={certificateForm.credential_url}
+                    onChange={(e) => setCertificateForm((form) => ({ ...form, credential_url: e.target.value }))}
+                    placeholder="https://..."
+                    className="mt-1.5 w-full rounded-xl border border-zinc-800 bg-[#0c0c0e] p-3 text-white"
+                  />
+                </label>
+                <button
+                  type="submit"
+                  disabled={isSavingCertificate}
+                  className="rounded-xl bg-amber-400 px-4 py-3 text-xs font-bold uppercase text-black disabled:opacity-60 md:col-span-2"
+                >
+                  {isSavingCertificate ? 'Saving...' : 'Add Certificate'}
+                </button>
+              </form>
+            )}
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {certificates.map((cert) => (
+                <div key={cert.id} className="obsidian-card rounded-2xl p-5 border border-zinc-800 flex flex-col justify-between">
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400">
+                        {cert.issue_date || cert.date}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => void deleteCertificate(cert.id)}
+                        aria-label={`Delete ${cert.title}`}
+                        className="rounded-lg p-1.5 text-zinc-500 hover:bg-rose-500/10 hover:text-rose-400"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <h3 className="font-bold text-sm text-white mb-1">{cert.title}</h3>
+                    <p className="text-xs text-zinc-400 mb-2">{cert.issuer}</p>
+                    {cert.credential_url && (
+                      <a href={cert.credential_url} target="_blank" rel="noreferrer" className="text-[11px] text-amber-300 hover:underline break-all">
+                        Verify credential
+                      </a>
+                    )}
+                  </div>
+                  <div className="text-[10px] font-mono text-amber-400 pt-2 mt-3 border-t border-zinc-800/80">
+                    ID: {cert.credential_id || 'Not provided'} · Order {cert.order_index ?? 0}
+                  </div>
+                </div>
+              ))}
+              {certificates.length === 0 && (
+                <p className="py-8 text-center text-xs text-zinc-500 font-mono sm:col-span-2 lg:col-span-3">No certificates added yet.</p>
+              )}
+            </div>
           </div>
         )}
 

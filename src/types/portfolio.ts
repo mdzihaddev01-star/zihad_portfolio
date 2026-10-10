@@ -120,6 +120,7 @@ export interface Education {
   id: string;
   institution: string;
   degree: string;
+  duration?: string;
   field_of_study?: string;
   start_year: string;
   end_year: string;

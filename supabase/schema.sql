@@ -145,6 +145,7 @@ CREATE TABLE IF NOT EXISTS public.education (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     institution VARCHAR(255) NOT NULL,
     degree VARCHAR(255) NOT NULL,
+    duration VARCHAR(100),
     field_of_study VARCHAR(255),
     start_year VARCHAR(50) NOT NULL,
     end_year VARCHAR(50) NOT NULL,
@@ -153,6 +154,8 @@ CREATE TABLE IF NOT EXISTS public.education (
     order_index INT DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+ALTER TABLE public.education ADD COLUMN IF NOT EXISTS duration VARCHAR(100);
 
 DO $$
 BEGIN
@@ -176,11 +179,29 @@ CREATE TABLE IF NOT EXISTS public.certificates (
     issuer VARCHAR(255) NOT NULL,
     date VARCHAR(50) NOT NULL,
     credential_id VARCHAR(255),
+    credential_url TEXT,
     file_url TEXT,
     badge_color VARCHAR(50) DEFAULT '#00F0FF',
     order_index INT DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+ALTER TABLE public.certificates ADD COLUMN IF NOT EXISTS credential_url TEXT;
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime')
+       AND NOT EXISTS (
+           SELECT 1
+           FROM pg_publication_tables
+           WHERE pubname = 'supabase_realtime'
+             AND schemaname = 'public'
+             AND tablename = 'certificates'
+       ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.certificates;
+    END IF;
+END;
+$$;
 
 -- Table 6: Client Bookings & Strategic Leads
 CREATE TABLE IF NOT EXISTS public.bookings (

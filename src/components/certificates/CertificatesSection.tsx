@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLanguage } from '@/lib/languageContext';
-import { DEFAULT_CERTIFICATES } from '@/lib/supabase';
-import { Certificate } from '@/types/portfolio';
+import { DEFAULT_CERTIFICATES, isSupabaseConfigured, supabase } from '@/lib/supabase';
+import type { Certificate } from '@/types/portfolio';
 import { soundFx } from '@/lib/soundFx';
 import { 
   Award, 
@@ -18,7 +18,51 @@ import {
 
 export function CertificatesSection() {
   const { t } = useLanguage();
+  const [certificates, setCertificates] = useState<Certificate[]>(DEFAULT_CERTIFICATES);
   const [selectedCert, setSelectedCert] = useState<Certificate | null>(null);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) return;
+    const client = supabase;
+    let active = true;
+
+    const loadCertificates = async () => {
+      try {
+        const { data, error } = await client
+          .from('certificates')
+          .select('*')
+          .order('order_index', { ascending: true });
+
+        if (error) throw error;
+        if (!active) return;
+
+        if (data && data.length > 0) {
+          setCertificates(data.map((certificate) => ({
+            ...certificate,
+            issue_date: certificate.date || certificate.issue_date,
+          })) as Certificate[]);
+        } else {
+          setCertificates(DEFAULT_CERTIFICATES);
+        }
+      } catch (error) {
+        console.error('Certificates fetch failed:', error);
+        if (active) setCertificates(DEFAULT_CERTIFICATES);
+      }
+    };
+
+    void loadCertificates();
+    const channel = client
+      .channel('homepage-certificates-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'certificates' }, () => {
+        void loadCertificates();
+      })
+      .subscribe();
+
+    return () => {
+      active = false;
+      void client.removeChannel(channel);
+    };
+  }, []);
 
   return (
     <section
@@ -55,7 +99,7 @@ export function CertificatesSection() {
         {/* Certificates Cards Grid */}
         <div className="flex-1 flex items-center py-4 overflow-y-auto max-h-[66vh]">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
-            {DEFAULT_CERTIFICATES.map((cert) => (
+            {certificates.map((cert) => (
               <div
                 key={cert.id}
                 onClick={() => {
@@ -71,7 +115,7 @@ export function CertificatesSection() {
                     </div>
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#0c0c0e] text-[#A4A7AE] border border-white/10 flex items-center gap-1">
                       <Calendar className="w-3 h-3 text-[#f5a623]" />
-                      <span>{cert.issue_date}</span>
+                      <span>{cert.issue_date || cert.date}</span>
                     </span>
                   </div>
 
@@ -129,7 +173,7 @@ export function CertificatesSection() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[#A4A7AE]">ISSUE_DATE:</span>
-                  <span className="text-[#f5a623]">{selectedCert.issue_date}</span>
+                    <span className="text-[#f5a623]">{selectedCert.issue_date || selectedCert.date}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[#A4A7AE]">CREDENTIAL_ID:</span>

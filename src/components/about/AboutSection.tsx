@@ -49,11 +49,7 @@ export function AboutSection({ onOpenCvBuilder }: AboutSectionProps) {
         if (error) throw error;
         if (!active) return;
 
-        if (data && data.length > 0) {
-          setEducationList(data as Education[]);
-        } else {
-          setEducationList(DEFAULT_EDUCATION);
-        }
+        setEducationList((data ?? []) as Education[]);
       } catch (error) {
         console.error('Education milestones fetch failed:', error);
         if (active) setEducationList(DEFAULT_EDUCATION);
@@ -242,11 +238,14 @@ export function AboutSection({ onOpenCvBuilder }: AboutSectionProps) {
 
                     <div className="text-right sm:shrink-0 font-mono text-xs">
                       <span className="px-2.5 py-0.5 rounded-full bg-[#202229] text-[#F4F1E9] border border-white/10 text-[10px] font-bold">
-                        {edu.start_year} — {edu.end_year}
+                        {edu.duration || [edu.start_year, edu.end_year].filter(Boolean).join(' — ')}
                       </span>
                     </div>
                   </div>
                 ))}
+                {educationList.length === 0 && (
+                  <p className="py-4 text-center text-xs font-mono text-[#A4A7AE]">No academic milestones published yet.</p>
+                )}
               </div>
             </div>
           </div>
