@@ -1,0 +1,368 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background: #0c0c0e;
+    --surface: #141418;
+    --panel: #1a1a20;
+    --foreground: #f4f4f6;
+    --muted: #9e9ea8;
+    --accent-amber: #f5a623;
+    --accent-warm: #e58a3c;
+    --accent-gold: #ffd166;
+    --accent-glow: rgba(245, 166, 35, 0.28);
+    --accent-lime: #10b981;
+    --accent-lime-dim: rgba(16, 185, 129, 0.12);
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-amber: rgba(245, 166, 35, 0.3);
+    --card-bg: rgba(255, 255, 255, 0.035);
+    --card-hover: rgba(255, 255, 255, 0.06);
+    --electric-cyan: #f5a623;
+  }
+
+  .light {
+    --background: #fbf9f5;
+    --surface: #ffffff;
+    --panel: #f3f0e8;
+    --foreground: #141518;
+    --muted: #6b7280;
+    --accent-amber: #d97706;
+    --accent-warm: #b45309;
+    --accent-gold: #f59e0b;
+    --accent-glow: rgba(217, 119, 6, 0.18);
+    --accent-lime: #059669;
+    --accent-lime-dim: rgba(5, 150, 105, 0.12);
+    --border-color: rgba(0, 0, 0, 0.08);
+    --border-amber: rgba(217, 119, 6, 0.25);
+    --card-bg: #ffffff;
+    --card-hover: #f9f8f4;
+    --electric-cyan: #d97706;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    color-scheme: dark;
+  }
+
+  html.light {
+    color-scheme: light;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* ========================================================================= */
+/* RESPONSIVE SCROLL ARCHITECTURE */
+/* ========================================================================= */
+
+.snap-container {
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 100vh;
+  height: 100dvh;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 1024px) {
+  .snap-container {
+    scroll-snap-type: y proximity;
+  }
+
+  .snap-section {
+    scroll-snap-align: start;
+    scroll-snap-stop: normal;
+  }
+}
+
+.snap-section {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+}
+
+/* Minimalist Smoky Slate Scrollbar with Warm Amber Glow Hover */
+.snap-container::-webkit-scrollbar {
+  width: 5px;
+}
+
+.snap-container::-webkit-scrollbar-track {
+  background: #0c0c0e;
+}
+
+.snap-container::-webkit-scrollbar-thumb {
+  background: #1f1f26;
+  border-radius: 9999px;
+}
+
+.snap-container::-webkit-scrollbar-thumb:hover {
+  background: #f5a623;
+  box-shadow: 0 0 10px #f5a623;
+}
+
+/* ========================================================================= */
+/* CINEMATIC WARM AMBER & SMOKY SLATE DESIGN SYSTEM UTILITIES */
+/* ========================================================================= */
+
+.obsidian-card {
+  background-color: rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 8px 24px rgba(0, 0, 0, 0.4);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.obsidian-card:hover {
+  background-color: rgba(255, 255, 255, 0.055);
+  border-color: rgba(245, 166, 35, 0.4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 24px rgba(245, 166, 35, 0.15);
+}
+
+.obsidian-panel {
+  background-color: #141418;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.obsidian-glass {
+  background: rgba(20, 20, 24, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Sophisticated Smoky Slate Square Grid Background */
+.obsidian-grid-bg {
+  background-color: #0c0c0e;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Atmospheric Warm Amber Lighting in Upper Right & Subtle Opposite Edge */
+.purple-atmosphere,
+.amber-atmosphere {
+  position: relative;
+}
+
+.purple-atmosphere::before,
+.amber-atmosphere::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 60vw;
+  height: 60vh;
+  max-width: 800px;
+  max-height: 800px;
+  background: radial-gradient(circle at 82% 18%, rgba(245, 166, 35, 0.22) 0%, rgba(229, 138, 60, 0.12) 40%, transparent 70%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.purple-atmosphere::after,
+.amber-atmosphere::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 45vw;
+  height: 45vh;
+  max-width: 600px;
+  max-height: 600px;
+  background: radial-gradient(circle at 15% 85%, rgba(229, 138, 60, 0.12) 0%, rgba(245, 166, 35, 0.05) 45%, transparent 70%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Slow, Continuous Controlled Elliptical / Orbital Typography Animation */
+@keyframes orbitalElliptical {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate3d(18px, -14px, 0) rotate(0.8deg);
+  }
+  50% {
+    transform: translate3d(0, -26px, 0) rotate(0deg);
+  }
+  75% {
+    transform: translate3d(-18px, -14px, 0) rotate(-0.8deg);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+}
+
+.orbital-typography {
+  animation: orbitalElliptical 22s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Holographic Project Card Reflection & Perspective Sheen */
+.holographic-card {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.holographic-card::before {
+  content: '';
+  position: absolute;
+  inset: -60%;
+  background: linear-gradient(
+    115deg,
+    transparent 20%,
+    rgba(229, 138, 60, 0.08) 40%,
+    rgba(245, 166, 35, 0.2) 50%,
+    rgba(255, 209, 102, 0.15) 60%,
+    transparent 80%
+  );
+  transform: rotate(-20deg) translateY(-120%);
+  transition: transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+  z-index: 15;
+}
+
+.holographic-card:hover::before {
+  transform: rotate(-20deg) translateY(120%);
+}
+
+.holographic-card:hover {
+  border-color: rgba(245, 166, 35, 0.45);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 30px rgba(245, 166, 35, 0.18);
+}
+
+/* Restrained Developer Annotation / Syntax Badges */
+.dev-annotation-badge {
+  background: rgba(20, 20, 24, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(245, 166, 35, 0.25);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 0 12px rgba(245, 166, 35, 0.1);
+  transition: all 0.25s ease;
+}
+
+.dev-annotation-badge:hover {
+  border-color: rgba(245, 166, 35, 0.55);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5), 0 0 18px rgba(245, 166, 35, 0.22);
+  transform: translateY(-2px);
+}
+
+/* Kinetic Stagger Animation Utility */
+@keyframes kineticReveal {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.kinetic-text {
+  animation: kineticReveal 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Fluid Magnetic Cursor Styling with Violet Glow */
+.fluid-cursor-dot {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 6px;
+  height: 6px;
+  background-color: #A855F7;
+  border-radius: 9999px;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.15s ease, transform 0.06s ease;
+  box-shadow: 0 0 12px #A855F7, 0 0 20px #8B5CF6;
+}
+
+.fluid-cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(168, 85, 247, 0.5);
+  border-radius: 9999px;
+  pointer-events: none;
+  z-index: 9998;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), 
+              height 0.25s cubic-bezier(0.16, 1, 0.3, 1), 
+              border-color 0.2s ease,
+              background-color 0.2s ease;
+}
+
+.fluid-cursor-ring.active {
+  width: 68px;
+  height: 68px;
+  border-color: #A855F7;
+  background-color: rgba(168, 85, 247, 0.12);
+  box-shadow: 0 0 25px rgba(168, 85, 247, 0.25);
+}
+
+.fluid-cursor-label {
+  font-size: 9px;
+  font-family: monospace;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #C084FC;
+  text-transform: uppercase;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Reversible Visual Glitch Mode Effects */
+@keyframes glitchScanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+.glitch-scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.3) 0px,
+    rgba(0, 0, 0, 0.3) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .fluid-cursor-dot, .fluid-cursor-ring, .orbital-typography {
+    display: none !important;
+    animation: none !important;
+  }
+}
+
