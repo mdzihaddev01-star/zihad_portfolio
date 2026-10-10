@@ -102,6 +102,8 @@ export function playSynthesizerTone(freq = 440, type: OscillatorType = 'triangle
 }`
 };
 
+const PROJECT_FALLBACK_IMAGE = '/images/mohammad_zihad.jpg';
+
 export function ProjectsSection() {
   const { t } = useLanguage();
   const [projects, setProjects] = useState<Project[]>(isSupabaseConfigured ? [] : DEFAULT_PROJECTS);
@@ -229,9 +231,9 @@ export function ProjectsSection() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filteredProjects.map((project) => {
             const isCodeMode = Boolean(codeInspectorMode[project.id]);
-            const imagesList = project.images && project.images.length > 0 ? project.images : [project.image_url];
+            const imagesList = project.images?.filter(Boolean) ?? [];
             const activeIdx = activeThumbnailIndex[project.id] ?? 0;
-            const currentImg = imagesList[activeIdx] || project.image_url;
+            const currentImg = imagesList[activeIdx] || project.image_url || PROJECT_FALLBACK_IMAGE;
             const snippet = PROJECT_CODE_SNIPPETS[project.id] || `// Production Architecture for ${project.title}`;
 
             return (
@@ -420,9 +422,17 @@ export function ProjectsSection() {
             {/* Cover image preview */}
             <div className="rounded-2xl overflow-hidden border border-white/10 h-64 sm:h-72 w-full bg-black">
               <img
-                src={selectedCaseStudy.image_url}
+                src={selectedCaseStudy.images?.[0] || selectedCaseStudy.image_url || PROJECT_FALLBACK_IMAGE}
                 alt={selectedCaseStudy.title}
                 className="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
+                onError={(event) => {
+                  const image = event.currentTarget;
+                  if (image.dataset.fallbackApplied) return;
+                  image.dataset.fallbackApplied = 'true';
+                  image.src = PROJECT_FALLBACK_IMAGE;
+                }}
               />
             </div>
 
