@@ -99,6 +99,7 @@ export default function AdminPage({
   const [projects, setProjects] = useState<Project[]>(isSupabaseConfigured ? [] : DEFAULT_PROJECTS);
   const [projectSaveError, setProjectSaveError] = useState('');
   const [isSavingProject, setIsSavingProject] = useState(false);
+  const [projectSavedToast, setProjectSavedToast] = useState(false);
   const [skills, setSkills] = useState<Skill[]>(DEFAULT_SKILLS);
   const [certificates, setCertificates] = useState<Certificate[]>(DEFAULT_CERTIFICATES);
   const [meetings, setMeetings] = useState<Meeting[]>(DEFAULT_MEETINGS);
@@ -546,6 +547,8 @@ export default function AdminPage({
     setIsSavingProject(true);
 
     try {
+      const images = newProject.images.filter((image) => typeof image === 'string' && image.trim().length > 0);
+      const imageUrl = images[0] || newProject.image_url.trim();
       const { data: project, error } = await supabase
         .from('projects')
         .insert({
@@ -555,8 +558,8 @@ export default function AdminPage({
           tags: newProject.tags.split(',').map((tag) => tag.trim()).filter(Boolean),
           live_url: newProject.live_url.trim() || 'https://demo.dev',
           github_url: newProject.github_url.trim() || 'https://github.com',
-          image_url: newProject.images[0] || newProject.image_url,
-          images: newProject.images.length > 0 ? newProject.images : [newProject.image_url],
+          image_url: imageUrl,
+          images: images.length > 0 ? images : [imageUrl],
           featured: true,
           order_index: projects.length + 1,
         })
@@ -580,7 +583,10 @@ export default function AdminPage({
       }
     } catch (error) {
       console.error('Supabase project insert error:', error);
-      const message = error instanceof Error ? error.message : String(error);
+      const errorObject = error && typeof error === 'object'
+        ? error as { message?: string; details?: string }
+        : null;
+      const message = errorObject?.message || errorObject?.details || JSON.stringify(error) || String(error);
       setProjectSaveError(`Project was not saved: ${message}`);
       return;
     } finally {
@@ -589,6 +595,8 @@ export default function AdminPage({
 
     setIsModalOpen(false);
     setProjectSaveError('');
+    setProjectSavedToast(true);
+    window.setTimeout(() => setProjectSavedToast(false), 3000);
     setNewProject({
       title: '',
       description: '',
@@ -2564,6 +2572,13 @@ export default function AdminPage({
               </form>
             )}
           </div>
+        </div>
+      )}
+
+      {projectSavedToast && (
+        <div role="status" className="fixed top-5 right-5 z-[60] flex items-center gap-2 rounded-xl border border-emerald-400/40 bg-[#101512] px-4 py-3 text-sm font-mono font-bold text-emerald-300 shadow-xl animate-in fade-in">
+          <CheckCircle2 className="h-4 w-4" />
+          <span>Project saved successfully.</span>
         </div>
       )}
 
