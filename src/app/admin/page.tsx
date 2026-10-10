@@ -65,7 +65,8 @@ import {
   AlertCircle,
   ThumbsUp,
   ThumbsDown,
-  Filter
+  Filter,
+  LogOut
 } from 'lucide-react';
 
 function GithubIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -953,76 +954,44 @@ export default function AdminPage({
   // AUTHENTICATED ADMIN DASHBOARD
   // ---------------------------------------------------------------------------
   return (
-    <div className="min-h-screen bg-[#0c0c0e] text-zinc-100 p-4 md:p-8 obsidian-grid-bg">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Top Navbar */}
-        <div className="obsidian-card rounded-3xl p-4 md:p-6 border border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              onClick={() => soundFx.playBlip()}
-              className="p-2 rounded-2xl bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800 hover:border-amber-400"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl md:text-2xl font-black text-white tracking-tight font-mono uppercase">
-                  CMS DASHBOARD
-                </h1>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">
-                  {profile.full_name}
-                </span>
-              </div>
-              <p className="text-xs font-mono text-zinc-400">
-                Supabase Engine Status:{' '}
-                <span className="text-amber-400">
-                  {isSupabaseConfigured ? 'CONNECTED' : 'LOCAL STORE ENGINE (Ready)'}
-                </span>
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => {
-                soundFx.playBlip();
-                setModalType('project');
-                setIsModalOpen(true);
-              }}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-400 text-black font-extrabold text-xs uppercase tracking-wider hover:bg-amber-300 shadow-[0_0_15px_#f5a623] cursor-pointer font-mono"
-            >
-              <Plus className="w-4 h-4" />
-              <span>New Project</span>
-            </button>
-
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 rounded-xl bg-zinc-900 text-zinc-400 hover:text-rose-400 text-xs font-mono border border-zinc-800 cursor-pointer"
-            >
-              Log Out
-            </button>
+    <div className="flex h-screen min-h-screen w-full overflow-hidden bg-[#07090e] text-white obsidian-grid-bg">
+      <aside className="sticky top-0 flex h-screen w-16 shrink-0 flex-col gap-5 border-r border-white/10 bg-[#0a0d14]/95 p-2 md:w-64 md:gap-6 md:p-5">
+        <div className="flex items-center justify-center gap-3 border-b border-white/10 pb-4 md:justify-start">
+          <Link
+            href="/"
+            onClick={() => soundFx.playBlip()}
+            aria-label="Back to portfolio"
+            title="Back to portfolio"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-neutral-400 hover:bg-white/10 hover:text-white"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div className="hidden min-w-0 md:block">
+            <h2 className="whitespace-nowrap text-sm font-bold uppercase tracking-wider text-white">CMS Dashboard</h2>
+            <span className={`font-mono text-[10px] ${isSupabaseConfigured ? 'text-emerald-400' : 'text-amber-300'}`}>
+              Supabase: {isSupabaseConfigured ? 'CONNECTED' : 'LOCAL MODE'}
+            </span>
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+        <nav aria-label="Admin sections" className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto overflow-x-hidden pr-0.5">
           {(() => {
             const pendingCount = testimonials.filter((t) => t.status === 'pending').length;
             return [
               { id: 'overview', label: 'Telemetry Overview', icon: Sparkles },
               { id: 'settings', label: 'Brand & Content CMS', icon: Settings },
               { id: 'counters', label: 'Live Counters', icon: Hash },
-              { id: 'projects', label: `Projects (${projects.length})`, icon: Briefcase },
-              { id: 'skills', label: `Skills (${skills.length})`, icon: Layers },
-              { id: 'education', label: `Academic Milestones (${education.length})`, icon: GraduationCap },
-              { id: 'certificates', label: `Certificates (${certificates.length})`, icon: Award },
-              { id: 'meetings', label: `Bookings (${meetings.length})`, icon: Calendar },
-              { 
-                id: 'reviews', 
-                label: `Reviews (${testimonials.length})${pendingCount > 0 ? ` • ${pendingCount} PENDING` : ''}`, 
+              { id: 'projects', label: 'Projects', count: projects.length, icon: Briefcase },
+              { id: 'skills', label: 'Skills', count: skills.length, icon: Layers },
+              { id: 'education', label: 'Academic Milestones', count: education.length, icon: GraduationCap },
+              { id: 'certificates', label: 'Certificates', count: certificates.length, icon: Award },
+              { id: 'meetings', label: 'Bookings', count: meetings.length, icon: Calendar },
+              {
+                id: 'reviews',
+                label: 'Reviews',
+                count: testimonials.length,
+                pendingCount,
                 icon: MessageSquareQuote,
-                isPending: pendingCount > 0,
               },
               { id: 'analytics', label: 'Visitor Heatmap', icon: BarChart3 },
             ];
@@ -1032,24 +1001,64 @@ export default function AdminPage({
             return (
               <button
                 key={tab.id}
+                type="button"
+                title={tab.label}
+                aria-label={tab.pendingCount ? `${tab.label}, ${tab.pendingCount} pending` : tab.label}
+                aria-current={isActive ? 'page' : undefined}
                 onClick={() => {
                   soundFx.playBlip();
                   setActiveTab(tab.id as typeof activeTab);
                 }}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-bold whitespace-nowrap cursor-pointer transition-all ${
+                className={`flex min-h-10 w-full min-w-0 items-center justify-center gap-3 rounded-xl border px-2 py-2.5 text-left text-xs font-medium transition-all md:justify-start md:px-3 ${
                   isActive
-                    ? 'bg-amber-400 text-black shadow-[0_0_15px_#f5a623]'
-                    : tab.isPending
-                    ? 'bg-amber-500/15 text-amber-300 border border-amber-500/40 hover:bg-amber-500/25'
-                    : 'bg-[#121216] text-zinc-400 hover:text-white border border-zinc-800'
+                    ? 'border-amber-400/30 bg-amber-400/10 text-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.15)]'
+                    : tab.pendingCount
+                    ? 'border-amber-500/30 text-amber-300 hover:bg-white/5'
+                    : 'border-transparent text-neutral-400 hover:bg-white/5 hover:text-white'
                 }`}
               >
-                <Icon className="w-4 h-4" />
-                <span>{tab.label}</span>
+                <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span className="hidden min-w-0 flex-1 break-words md:block">{tab.label}</span>
+                {tab.count !== undefined && (
+                  <span className="hidden shrink-0 rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] text-neutral-300 md:inline-flex">
+                    {tab.count}
+                  </span>
+                )}
               </button>
             );
           })}
+        </nav>
+
+        <div className="flex flex-col gap-2 border-t border-white/10 pt-4">
+          <button
+            type="button"
+            title="New Project"
+            aria-label="New Project"
+            onClick={() => {
+              soundFx.playBlip();
+              setModalType('project');
+              setIsModalOpen(true);
+            }}
+            className="flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-amber-400 px-2 py-2.5 text-xs font-semibold text-black shadow-[0_0_20px_rgba(251,191,36,0.3)] transition-all hover:bg-amber-300 md:px-4"
+          >
+            <Plus className="h-4 w-4 shrink-0" />
+            <span className="hidden md:inline">NEW PROJECT</span>
+          </button>
+          <button
+            type="button"
+            title="Log Out"
+            aria-label="Log Out"
+            onClick={handleLogout}
+            className="flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-white/5 px-2 py-2 text-xs text-neutral-400 transition-colors hover:bg-red-500/10 hover:text-red-400 md:px-4"
+          >
+            <LogOut className="h-4 w-4 shrink-0" />
+            <span className="hidden md:inline">Log Out</span>
+          </button>
         </div>
+      </aside>
+
+      <main className="min-w-0 flex-1 overflow-y-auto p-4 md:p-8">
+        <div className="mx-auto max-w-6xl space-y-6">
 
         {/* ------------------------------------------------------------------- */}
         {/* TAB 1: OVERVIEW METRICS */}
@@ -2748,7 +2757,8 @@ export default function AdminPage({
             </div>
           </div>
         )}
-      </div>
+        </div>
+      </main>
 
       {/* CREATE NEW ITEM MODAL (WITH MULTI-IMAGE UPLOAD SUPPORT) */}
       {isModalOpen && (
