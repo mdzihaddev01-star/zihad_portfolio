@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { fetchSiteSettings } from '@/lib/siteSettings';
 import { 
   supabase, 
   isSupabaseConfigured, 
@@ -28,14 +29,14 @@ export async function POST(req: NextRequest) {
 
     if (isSupabaseConfigured && supabase) {
       try {
-        const [settingsRes, projRes, skillsRes, eduRes] = await Promise.all([
-          supabase.from('site_settings').select('*').limit(1).single(),
+        const [settingsData, projRes, skillsRes, eduRes] = await Promise.all([
+          fetchSiteSettings(),
           supabase.from('projects').select('*').order('order_index', { ascending: true }),
           supabase.from('skills').select('*').order('order_index', { ascending: true }),
           supabase.from('education').select('*').order('order_index', { ascending: true }),
         ]);
 
-        if (settingsRes.data) profileData = { ...DEFAULT_SETTINGS, ...settingsRes.data };
+        if (settingsData) profileData = { ...DEFAULT_SETTINGS, ...settingsData };
         if (projRes.data && projRes.data.length > 0) projectsData = projRes.data;
         if (skillsRes.data && skillsRes.data.length > 0) skillsData = skillsRes.data;
         if (eduRes.data && eduRes.data.length > 0) educationData = eduRes.data;
@@ -57,13 +58,13 @@ export async function POST(req: NextRequest) {
       .join('\n');
 
     // Canonical Developer Contact Details
-    const primaryEmail = 'zihad.dev@gmail.com';
-    const altEmail = profileData.contact_email || 'mohammadzihad.dev@gmail.com';
-    const primaryPhone = profileData.public_phone || '+880 1700-000000';
+    const primaryEmail = profileData.contact_email || profileData.public_email || '';
+    const altEmail = profileData.public_email || primaryEmail;
+    const primaryPhone = profileData.public_phone || profileData.phone || '';
     const githubUrl = profileData.social_github || 'https://github.com/mohammadzihad';
     const linkedinUrl = profileData.social_linkedin || 'https://linkedin.com/in/mohammadzihad';
     const twitterUrl = profileData.social_twitter || 'https://twitter.com/mohammadzihad';
-    const location = profileData.city_country || profileData.location || 'Dhaka, Bangladesh';
+    const location = profileData.public_address || profileData.address || profileData.city_country || profileData.location || '';
 
     // -------------------------------------------------------------------------
     // 2. SYSTEM INSTRUCTION (ZERO HALLUCINATION & MULTILINGUAL RULES)
@@ -253,7 +254,7 @@ COMMUNICATION & MULTILINGUAL RULES (MANDATORY):
   } catch (error) {
     console.error('Ask ZORRO assistant route error:', error);
     return NextResponse.json(
-      { reply: "Ask ZORRO is currently updating profile data. For immediate inquiries, please email Mohammad Zihad directly at zihad.dev@gmail.com." },
+      { reply: "Ask ZORRO is currently updating profile data. For immediate inquiries, please email Mohammad Zihad directly at mdzihaddev01@gmail.com." },
       { status: 500 }
     );
   }

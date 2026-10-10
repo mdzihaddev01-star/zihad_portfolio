@@ -26,6 +26,7 @@ import {
   isSupabaseConfigured
 } from '@/lib/supabase';
 import { soundFx } from '@/lib/soundFx';
+import { fetchSiteSettings, SITE_SETTINGS_ID, toSiteSettingsRecord } from '@/lib/siteSettings';
 import { ProposalModal } from '@/components/admin/ProposalModal';
 import { 
   ShieldCheck, 
@@ -170,6 +171,14 @@ export default function AdminPage({
       } catch {}
     }
 
+    if (isSupabaseConfigured) {
+      void fetchSiteSettings().then((settings) => {
+        if (!settings) return;
+        setProfile((prev) => ({ ...prev, ...settings }));
+        localStorage.setItem('zihad_portfolio_settings', JSON.stringify(settings));
+      });
+    }
+
     const localTestimonials = localStorage.getItem('zihad_portfolio_testimonials');
     if (localTestimonials) {
       try {
@@ -240,21 +249,22 @@ export default function AdminPage({
     soundFx.playFanfare();
     localStorage.setItem('zihad_profile_settings', JSON.stringify(profile));
     localStorage.setItem('zihad_portfolio_settings', JSON.stringify(profile));
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new Event('zihad_settings_updated'));
-    }
     if (isSupabaseConfigured && supabase) {
       try {
-        await supabase
+        const { error } = await supabase
           .from('site_settings')
           .upsert({
-            id: '00000000-0000-0000-0000-000000000001',
-            ...profile,
+            ...toSiteSettingsRecord(profile),
+            id: SITE_SETTINGS_ID,
             updated_at: new Date().toISOString(),
           });
+        if (error) console.warn('Site settings upsert error:', error);
       } catch (err) {
         console.warn('Site settings upsert error:', err);
       }
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('zihad_settings_updated'));
     }
     setSettingsSavedToast(true);
     setTimeout(() => setSettingsSavedToast(false), 3000);
@@ -1291,7 +1301,7 @@ export default function AdminPage({
                     <label className="text-zinc-400 mb-1 block">Contact Email *</label>
                     <input
                       type="email"
-                      value={profile.contact_email || 'zihad.dev@gmail.com'}
+                      value={profile.contact_email || 'mdzihaddev01@gmail.com'}
                       onChange={(e) => setProfile({ ...profile, contact_email: e.target.value })}
                       className="w-full bg-[#0c0c0e] border border-zinc-800 rounded-xl p-3 text-white focus:outline-none focus:border-amber-400"
                     />
@@ -1399,7 +1409,7 @@ export default function AdminPage({
                     <label className="text-zinc-400 mb-1 block">Curated Knowledge Base Context (Injected into Gemini RAG)</label>
                     <textarea
                       rows={3}
-                      value={profile.zorro_knowledge_base || "Mohammad Zihad is a full-stack developer based in Dhaka, Bangladesh. Proficient in Next.js, TypeScript, React, Node.js, Three.js, GSAP, and PostgreSQL. Contact him at zihad.dev@gmail.com."}
+                      value={profile.zorro_knowledge_base || "Mohammad Zihad is a full-stack developer based in Dhaka, Bangladesh. Proficient in Next.js, TypeScript, React, Node.js, Three.js, GSAP, and PostgreSQL. Contact him at mdzihaddev01@gmail.com."}
                       onChange={(e) => setProfile({ ...profile, zorro_knowledge_base: e.target.value })}
                       className="w-full bg-[#0c0c0e] border border-zinc-800 rounded-xl p-3 text-white resize-none focus:outline-none focus:border-amber-400"
                     />

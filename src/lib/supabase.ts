@@ -51,7 +51,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   about_experience_years: 4,
 
   // Contact & Address
-  contact_email: 'mohammadzihad.dev@gmail.com',
+  contact_email: 'mohammadmdzihaddev01@gmail.com',
   public_phone: '+880 1700-000000',
   public_address: 'Mirpur DOHS, Dhaka, Bangladesh',
   city_country: 'Dhaka, Bangladesh',

@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { soundFx } from '@/lib/soundFx';
+import { useSiteSettings } from '@/lib/useSiteSettings';
 import { 
   ArrowUp, 
   Mail, 
@@ -32,23 +33,12 @@ function LinkedinIcon(props: React.SVGProps<SVGSVGElement>) {
 }
 
 export function Footer() {
-  const [settings, setSettings] = useState<any>(null);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('zihad_portfolio_settings');
-    if (saved) {
-      try {
-        setSettings(JSON.parse(saved));
-      } catch {
-        // ignore
-      }
-    }
-  }, []);
+  const settings = useSiteSettings();
 
   const footerHeading = settings?.footer_heading || 'HAVE A GOOD PROJECT IN MIND?';
   const footerSubheading = settings?.footer_subheading || 'Available for bespoke architectural contracts, creative development studio collaborations, and forward-thinking technical leadership.';
-  const email = settings?.contact_email || 'zihad.dev@gmail.com';
-  const address = settings?.public_address || 'Dhaka, Bangladesh';
+  const email = settings?.contact_email || settings?.public_email || '';
+  const address = settings?.public_address || settings?.address || '';
   const github = settings?.social_github || 'https://github.com/mohammadzihad';
   const linkedin = settings?.social_linkedin || 'https://linkedin.com/in/mohammadzihad';
   const availability = settings?.availability || 'CONTRACTS OPEN · 2026';

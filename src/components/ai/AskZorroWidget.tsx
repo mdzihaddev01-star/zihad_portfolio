@@ -73,6 +73,7 @@ export function AskZorroWidget({ isOpen, onToggle }: AskZorroWidgetProps) {
     try {
       const res = await fetch('/api/zorro', {
         method: 'POST',
+        cache: 'no-store',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: textToSend,
@@ -83,7 +84,7 @@ export function AskZorroWidget({ isOpen, onToggle }: AskZorroWidgetProps) {
       const data = await res.json();
       
       // 2. Take exact data.reply from JSON response
-      const botReply = data?.reply || (data?.error ? `Error: ${data.error}` : 'Thank you for your inquiry. You can contact Mohammad Zihad directly at zihad.dev@gmail.com.');
+      const botReply = data?.reply || (data?.error ? `Error: ${data.error}` : 'Thank you for your inquiry. Please use the contact section on this page to reach Mohammad Zihad.');
 
       const botMsg: ZorroChatMessage = {
         id: `zorro-${Date.now() + 1}`,
@@ -99,7 +100,7 @@ export function AskZorroWidget({ isOpen, onToggle }: AskZorroWidgetProps) {
         {
           id: `zorro-${Date.now() + 1}`,
           sender: 'zorro',
-          text: 'Unable to connect to the profile assistant server at this moment. You can reach Mohammad Zihad directly via email at zihad.dev@gmail.com.',
+          text: 'Unable to connect to the profile assistant server at this moment. Please use the contact section on this page to reach Mohammad Zihad.',
           timestamp: 'NOW',
         },
       ]);

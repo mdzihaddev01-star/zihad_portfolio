@@ -14,6 +14,7 @@ export interface SiteSettings {
   tagline: string;
   bio: string;
   avatar_url: string;
+  hero_portrait_url?: string;
   favicon_url: string;
   logo_url: string;
   view_count: number;
@@ -33,12 +34,18 @@ export interface SiteSettings {
   about_heading?: string;
   about_philosophy?: string;
   about_experience_years?: number;
+  about_academic?: string;
+  about_bio?: string;
+  about_stack?: string;
 
   // Contact & Address settings
   contact_email?: string;
+  public_email?: string;
   public_phone?: string;
   public_address?: string;
   city_country?: string;
+  phone?: string;
+  address?: string;
 
   // Social Links
   social_github?: string;

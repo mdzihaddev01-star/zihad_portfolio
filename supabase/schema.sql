@@ -39,9 +39,12 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
     about_heading VARCHAR(255) DEFAULT 'DIGITAL CRAFTSMANSHIP & SPATIAL ARCHITECTURE',
     about_philosophy TEXT DEFAULT 'I believe code is craftsmanship. Every interaction, transition, and microsecond of load time is an opportunity to evoke emotion and communicate engineering intent.',
     about_experience_years INT DEFAULT 4,
+    about_academic TEXT,
+    about_bio TEXT,
+    about_stack TEXT,
 
     -- Contact & Physical Address
-    contact_email VARCHAR(255) DEFAULT 'mohammadzihad.dev@gmail.com',
+    contact_email VARCHAR(255) DEFAULT 'mohammadmdzihaddev01@gmail.com',
     public_phone VARCHAR(100) DEFAULT '+880 1700-000000',
     public_address VARCHAR(255) DEFAULT 'Mirpur DOHS, Dhaka, Bangladesh',
     city_country VARCHAR(255) DEFAULT 'Dhaka, Bangladesh',
@@ -62,6 +65,25 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
 
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS about_academic TEXT;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS about_bio TEXT;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS about_stack TEXT;
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime')
+       AND NOT EXISTS (
+           SELECT 1
+           FROM pg_publication_tables
+           WHERE pubname = 'supabase_realtime'
+             AND schemaname = 'public'
+             AND tablename = 'site_settings'
+       ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.site_settings;
+    END IF;
+END;
+$$;
 
 -- Table 2: Projects Showcase
 CREATE TABLE IF NOT EXISTS public.projects (

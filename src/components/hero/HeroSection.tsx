@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useLanguage } from '@/lib/languageContext';
 import { soundFx } from '@/lib/soundFx';
+import { useSiteSettings } from '@/lib/useSiteSettings';
+import type { SiteSettings } from '@/types/portfolio';
 import { 
   ArrowRight, 
   Calendar, 
@@ -38,7 +40,7 @@ interface HeroSectionProps {
   isZeroGravityActive: boolean;
   onToggleTerminal?: () => void;
   onOpenCvBuilder?: () => void;
-  settings?: any;
+  settings?: SiteSettings;
 }
 
 export function HeroSection({
@@ -49,47 +51,13 @@ export function HeroSection({
   settings: initialSettings,
 }: HeroSectionProps) {
   const { dir } = useLanguage();
-  const [settings, setSettings] = useState(initialSettings || null);
+  const settings = useSiteSettings(initialSettings);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [spotlightPos, setSpotlightPos] = useState({ x: 50, y: 50 });
   const [isHoveringCard, setIsHoveringCard] = useState(false);
   const [copiedContact, setCopiedContact] = useState<string | null>(null);
   const [activeDockItem, setActiveDockItem] = useState('hero');
   const cardRef = useRef<HTMLDivElement>(null);
-
-  // Sync settings from localStorage or props
-  useEffect(() => {
-    if (initialSettings) {
-      setSettings(initialSettings);
-    } else {
-      const saved = localStorage.getItem('zihad_portfolio_settings');
-      if (saved) {
-        try {
-          setSettings(JSON.parse(saved));
-        } catch {
-          // ignore
-        }
-      }
-    }
-
-    const handleStorage = () => {
-      const saved = localStorage.getItem('zihad_portfolio_settings');
-      if (saved) {
-        try {
-          setSettings(JSON.parse(saved));
-        } catch {
-          // ignore
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorage);
-    window.addEventListener('zihad_settings_updated', handleStorage);
-    return () => {
-      window.removeEventListener('storage', handleStorage);
-      window.removeEventListener('zihad_settings_updated', handleStorage);
-    };
-  }, [initialSettings]);
 
   // Mouse move handler for 3D tilt and warm amber spotlight
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -134,10 +102,10 @@ export function HeroSection({
   const heroHeadline = settings?.full_name || 'Mohammad Zihad';
   const heroBio = settings?.bio || 'Architecting high-performance spatial web applications, distributed edge microservices, and kinetic digital products with mathematical craftsmanship.';
   const portraitUrl = settings?.avatar_url || settings?.hero_portrait_url || '/images/mohammad_zihad.jpg';
-  const emailAddress = settings?.public_email || 'zihad.dev@gmail.com';
+  const emailAddress = settings?.contact_email || settings?.public_email || '';
   const linkedinUrl = settings?.social_linkedin || 'https://linkedin.com/in/mohammadzihad';
-  const locationText = settings?.public_address || 'Dhaka, Bangladesh';
-  const phoneText = settings?.public_phone || '+880 1700 000000';
+  const locationText = settings?.public_address || settings?.address || '';
+  const phoneText = settings?.public_phone || settings?.phone || '';
 
   // Parallax offsets
   const portraitOffset = { x: tilt.y * 0.3, y: tilt.x * 0.25 };
