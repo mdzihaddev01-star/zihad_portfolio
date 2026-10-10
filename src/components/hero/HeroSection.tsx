@@ -231,7 +231,7 @@ export function HeroSection({
             {/* Subtitle in Warm Ochre / Amber-Gold */}
             <div className="flex items-center gap-2.5">
               <span style={{ backgroundColor: 'var(--hero-accent)', boxShadow: '0 0 10px var(--hero-accent)' }} className="w-2 h-2 rounded-full" />
-              <h2 style={{ color: 'var(--hero-accent)' }} className="text-xs font-mono font-semibold tracking-[0.25em] uppercase">
+              <h2 style={{ color: 'var(--hero-accent)' }} className="section-eyebrow text-xs font-mono font-semibold tracking-[0.25em] uppercase">
                 {heroSubtitle}
               </h2>
             </div>

@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+@theme inline {
+  --font-heading: "Aptos Display", "Avenir Next", "Segoe UI", sans-serif;
+  --font-body: "Aptos", "Avenir Next", "Segoe UI", sans-serif;
+}
+
 @layer base {
   :root {
     --background: #0c0c0e;
@@ -55,13 +60,54 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-body);
     overflow-x: hidden;
     margin: 0;
     padding: 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+}
+
+.snap-container h1,
+.snap-container h2,
+.snap-container h3 {
+  font-family: var(--font-heading);
+  letter-spacing: -0.025em;
+  text-transform: uppercase;
+  background-image: linear-gradient(to bottom, #fff 0%, #e5e5e5 55%, #a3a3a3 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 25px rgba(255, 255, 255, 0.12));
+}
+
+.snap-container p {
+  font-family: var(--font-body);
+  color: rgba(212, 212, 216, 0.9);
+  line-height: 1.625;
+}
+
+.snap-container .section-eyebrow {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 0.25em;
+  font-size: 0.75rem;
+  color: #fbbf24;
+  font-weight: 600;
+  text-transform: uppercase;
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  filter: none;
+}
+
+.section-eyebrow {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 0.25em;
+  font-size: 0.75rem;
+  color: #fbbf24;
+  font-weight: 600;
+  text-transform: uppercase;
 }
 
 /* ========================================================================= */
@@ -131,6 +177,88 @@
   background-color: rgba(255, 255, 255, 0.055);
   border-color: rgba(245, 166, 35, 0.4);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 24px rgba(245, 166, 35, 0.15);
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .snap-section .obsidian-card {
+    transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1), background-color 300ms ease, border-color 300ms ease, box-shadow 300ms ease;
+    transform-style: preserve-3d;
+  }
+
+  .snap-section .obsidian-card:hover,
+  .snap-section .kinetic-card:hover {
+    transform: perspective(1200px) rotateX(4deg) rotateY(-4deg) scale(1.02) translateZ(0);
+    will-change: transform;
+  }
+}
+
+@property --beam-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes border-beam {
+  to { --beam-angle: 360deg; }
+}
+
+.metric-beam {
+  position: relative;
+  isolation: isolate;
+  border-radius: 1.5rem;
+}
+
+.metric-beam::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: 2;
+  padding: 1.5px;
+  border-radius: inherit;
+  background: conic-gradient(from var(--beam-angle), transparent 0deg 280deg, rgba(16, 185, 129, 0.2) 310deg, #fbbf24 342deg, transparent 360deg);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: border-beam 8s linear infinite;
+}
+
+.metric-card {
+  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1), border-color 300ms ease, box-shadow 300ms ease;
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .metric-card:hover {
+    transform: perspective(900px) rotateX(3deg) rotateY(-3deg) translateZ(0);
+    border-color: rgba(251, 191, 36, 0.5);
+    box-shadow: 0 0 24px rgba(245, 158, 11, 0.12);
+    will-change: transform;
+  }
+}
+
+.metric-radar-dot {
+  position: relative;
+  isolation: isolate;
+}
+
+.metric-radar-dot::before,
+.metric-radar-dot::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border: 1px solid currentColor;
+  border-radius: 9999px;
+  opacity: 0;
+  animation: metric-radar 2.4s ease-out infinite;
+}
+
+.metric-radar-dot::after {
+  animation-delay: 1.2s;
+}
+
+@keyframes metric-radar {
+  0% { transform: scale(0.75); opacity: 0.65; }
+  100% { transform: scale(2.8); opacity: 0; }
 }
 
 .obsidian-panel {
@@ -403,6 +531,11 @@
     animation: none !important;
   }
   .hero-name-kinetic, .hero-name-gradient, .hero-code-line {
+    animation: none !important;
+  }
+  .metric-beam::before,
+  .metric-radar-dot::before,
+  .metric-radar-dot::after {
     animation: none !important;
   }
 }

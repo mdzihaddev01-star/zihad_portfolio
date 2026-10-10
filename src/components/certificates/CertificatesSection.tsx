@@ -79,7 +79,7 @@ export function CertificatesSection() {
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 border-b border-white/10 pb-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.04] border border-[#f5a623]/25 text-[#f5a623] text-xs font-mono font-semibold uppercase tracking-wider mb-2">
+            <div className="section-eyebrow inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.04] border border-[#f5a623]/25 text-[#f5a623] text-xs font-mono font-semibold uppercase tracking-wider mb-2">
               <Award className="w-3.5 h-3.5" />
               <span>06 // ACCREDITATIONS & HONORS</span>
             </div>
@@ -106,7 +106,7 @@ export function CertificatesSection() {
                   soundFx.playBlip();
                   setSelectedCert(cert);
                 }}
-                className="rounded-2xl p-5 bg-[#141418] border border-white/10 hover:border-[#f5a623]/50 transition-all cursor-pointer group flex flex-col justify-between"
+                className="kinetic-card transform-gpu rounded-2xl p-5 bg-[#141418] border border-white/10 hover:border-[#f5a623]/50 transition-all cursor-pointer group flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">

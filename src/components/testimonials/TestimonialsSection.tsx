@@ -154,7 +154,7 @@ export function TestimonialsSection() {
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-white/10 pb-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.04] border border-[#f5a623]/25 text-[#f5a623] text-xs font-mono font-semibold uppercase tracking-wider mb-2">
+            <div className="section-eyebrow inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.04] border border-[#f5a623]/25 text-[#f5a623] text-xs font-mono font-semibold uppercase tracking-wider mb-2">
               <MessageSquareQuote className="w-3.5 h-3.5" />
               <span>07 // TESTIMONIALS & REPUTATION</span>
             </div>

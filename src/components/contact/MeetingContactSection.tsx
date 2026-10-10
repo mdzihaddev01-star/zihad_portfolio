@@ -156,7 +156,7 @@ export function MeetingContactSection() {
       <div className="w-full max-w-7xl mx-auto flex flex-col h-full justify-between z-10">
         {/* Section Header */}
         <div className="border-b border-white/10 pb-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.04] border border-[#f5a623]/25 text-[#f5a623] text-xs font-mono font-semibold uppercase tracking-wider mb-2">
+          <div className="section-eyebrow inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.04] border border-[#f5a623]/25 text-[#f5a623] text-xs font-mono font-semibold uppercase tracking-wider mb-2">
             <Sparkles className="w-3.5 h-3.5" />
             <span>08 // CALENDAR & ESTIMATOR</span>
           </div>

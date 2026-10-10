@@ -21,6 +21,7 @@ import { LiquidParticleBackground } from '@/components/ui/LiquidParticleBackgrou
 import { AmbientAudioController } from '@/components/ui/AmbientAudioController';
 import { KonamiGlitchOverlay } from '@/components/ui/KonamiGlitchOverlay';
 import { DeveloperWorkspaceJourney } from '@/components/workspace/DeveloperWorkspaceJourney';
+import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { soundFx } from '@/lib/soundFx';
 
 export default function HomeClient() {
@@ -95,20 +96,22 @@ export default function HomeClient() {
       />
 
       <div className="snap-container">
-        <HeroSection
-          isZeroGravityActive={isZeroGravityActive}
-          onToggleZeroGravity={() => setIsZeroGravityActive((prev) => !prev)}
-          onToggleTerminal={() => setIsTerminalOpen((prev) => !prev)}
-          onOpenCvBuilder={() => setIsCvBuilderOpen(true)}
-        />
-        <AboutSection onOpenCvBuilder={() => setIsCvBuilderOpen(true)} />
-        <SkillsEducationSection />
-        <ProjectsSection />
-        <CertificatesSection />
-        <ArcadeZoneSection />
-        <TestimonialsSection />
-        <MeetingContactSection />
-        <Footer />
+        <ScrollReveal>
+          <HeroSection
+            isZeroGravityActive={isZeroGravityActive}
+            onToggleZeroGravity={() => setIsZeroGravityActive((prev) => !prev)}
+            onToggleTerminal={() => setIsTerminalOpen((prev) => !prev)}
+            onOpenCvBuilder={() => setIsCvBuilderOpen(true)}
+          />
+        </ScrollReveal>
+        <ScrollReveal delay={0.04}><AboutSection onOpenCvBuilder={() => setIsCvBuilderOpen(true)} /></ScrollReveal>
+        <ScrollReveal delay={0.08}><SkillsEducationSection /></ScrollReveal>
+        <ScrollReveal delay={0.12}><ProjectsSection /></ScrollReveal>
+        <ScrollReveal delay={0.16}><CertificatesSection /></ScrollReveal>
+        <ScrollReveal delay={0.2}><ArcadeZoneSection /></ScrollReveal>
+        <ScrollReveal delay={0.24}><TestimonialsSection /></ScrollReveal>
+        <ScrollReveal delay={0.28}><MeetingContactSection /></ScrollReveal>
+        <ScrollReveal delay={0.32}><Footer /></ScrollReveal>
       </div>
 
       <DeveloperWorkspaceJourney
