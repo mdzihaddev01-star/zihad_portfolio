@@ -104,6 +104,28 @@ export function playSynthesizerTone(freq = 440, type: OscillatorType = 'triangle
 
 const PROJECT_FALLBACK_IMAGE = '/images/mohammad_zihad.jpg';
 
+function normalizeProject(project: Partial<Project>, index: number): Project {
+  return {
+    id: typeof project.id === 'string' ? project.id : `project-${index}`,
+    title: typeof project.title === 'string' ? project.title : 'Untitled Project',
+    description: typeof project.description === 'string' ? project.description : '',
+    category: typeof project.category === 'string' ? project.category : 'Full-Stack',
+    tags: Array.isArray(project.tags)
+      ? project.tags.filter((tag): tag is string => typeof tag === 'string')
+      : [],
+    live_url: typeof project.live_url === 'string' ? project.live_url : '',
+    github_url: typeof project.github_url === 'string' ? project.github_url : '',
+    image_url: typeof project.image_url === 'string' ? project.image_url : '',
+    images: Array.isArray(project.images)
+      ? project.images.filter((image): image is string => typeof image === 'string')
+      : [],
+    featured: project.featured,
+    order_index: project.order_index,
+    created_at: project.created_at,
+    updated_at: project.updated_at,
+  };
+}
+
 export function ProjectsSection() {
   const { t } = useLanguage();
   const [projects, setProjects] = useState<Project[]>(isSupabaseConfigured ? [] : DEFAULT_PROJECTS);
@@ -129,20 +151,33 @@ export function ProjectsSection() {
     let active = true;
 
     const loadProjects = async () => {
-      const { data, error } = await client
-        .from('projects')
-        .select('*')
-        .order('created_at', { ascending: false });
+      try {
+        const { data, error } = await client
+          .from('projects')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-      if (!active) return;
-      if (error) {
-        console.error('Homepage projects fetch error:', error);
-        setProjectLoadError(error.message);
-      } else {
-        setProjects((data ?? []) as Project[]);
+        if (error) throw error;
+        if (!active) return;
+
+        if (data && data.length > 0) {
+          setProjects(data.map((project, index) => normalizeProject(project as Partial<Project>, index)));
+        } else {
+          setProjects(DEFAULT_PROJECTS);
+        }
         setProjectLoadError('');
+      } catch (error) {
+        console.error('Projects fetch failed:', error);
+        if (!active) return;
+
+        const errorObject = error && typeof error === 'object'
+          ? error as { message?: string }
+          : null;
+        setProjectLoadError(errorObject?.message || String(error));
+        setProjects(DEFAULT_PROJECTS);
+      } finally {
+        if (active) setIsLoadingProjects(false);
       }
-      setIsLoadingProjects(false);
     };
 
     void loadProjects();
