@@ -304,6 +304,21 @@
   transform-origin: left center;
 }
 
+@keyframes heroCodeDrift {
+  0% { transform: translate3d(0, 18px, 0); }
+  50% { transform: translate3d(6px, -10px, 0); }
+  100% { transform: translate3d(0, 18px, 0); }
+}
+
+.hero-code-line {
+  animation: heroCodeDrift 34s ease-in-out infinite;
+}
+
+.hero-code-line-delayed {
+  animation-delay: -17s;
+  animation-duration: 42s;
+}
+
 /* Fluid Magnetic Cursor Styling with Violet Glow */
 .fluid-cursor-dot {
   position: fixed;
@@ -387,7 +402,7 @@
     display: none !important;
     animation: none !important;
   }
-  .hero-name-kinetic, .hero-name-gradient {
+  .hero-name-kinetic, .hero-name-gradient, .hero-code-line {
     animation: none !important;
   }
 }

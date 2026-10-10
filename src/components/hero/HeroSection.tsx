@@ -35,6 +35,27 @@ function LinkedinIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
+const DEFAULT_THEME_CSS = `:root {
+  --accent-glow: #f59e0b;
+  --primary-tint: #ffb703;
+  --border-neon: rgba(245, 158, 11, 0.4);
+}`;
+
+const THEME_PRESETS = [
+  { name: 'Gold Core', accent: '#f59e0b', primary: '#ffb703', border: 'rgba(245, 158, 11, 0.4)' },
+  { name: 'Emerald Matrix', accent: '#10b981', primary: '#34d399', border: 'rgba(16, 185, 129, 0.45)' },
+  { name: 'Cyberpunk Violet', accent: '#a855f7', primary: '#d8b4fe', border: 'rgba(168, 85, 247, 0.45)' },
+  { name: 'Sapphire WebGL', accent: '#06b6d4', primary: '#67e8f9', border: 'rgba(6, 182, 212, 0.45)' },
+] as const;
+
+function readCssColor(css: string, variable: string, fallback: string) {
+  const match = css.match(new RegExp(`(?:^|[;{])\\s*--${variable}\\s*:\\s*([^;\\n}]+)`, 'i'));
+  const value = match?.[1].trim();
+  const isHex = value ? /^#(?:[\da-f]{3,4}|[\da-f]{6}|[\da-f]{8})$/i.test(value) : false;
+  const isRgb = value ? /^rgba?\(\s*[\d.%\s,/]+\)$/i.test(value) : false;
+  return value && (isHex || isRgb) ? value : fallback;
+}
+
 interface HeroSectionProps {
   onToggleZeroGravity: () => void;
   isZeroGravityActive: boolean;
@@ -57,6 +78,8 @@ export function HeroSection({
   const [isHoveringCard, setIsHoveringCard] = useState(false);
   const [copiedContact, setCopiedContact] = useState<string | null>(null);
   const [activeDockItem, setActiveDockItem] = useState('hero');
+  const [themeCss, setThemeCss] = useState(DEFAULT_THEME_CSS);
+  const [isThemeEditorOpen, setIsThemeEditorOpen] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
   // Mouse move handler for 3D tilt and warm amber spotlight
@@ -107,6 +130,18 @@ export function HeroSection({
   const linkedinUrl = settings?.social_linkedin || 'https://linkedin.com/in/mohammadzihad';
   const locationText = settings?.public_address || settings?.address || '';
   const phoneText = settings?.public_phone || settings?.phone || '';
+  const heroAccent = readCssColor(themeCss, 'accent-glow', '#f59e0b');
+  const heroPrimaryTint = readCssColor(themeCss, 'primary-tint', '#ffb703');
+  const heroBorderNeon = readCssColor(themeCss, 'border-neon', 'rgba(245, 158, 11, 0.4)');
+  const heroThemeStyle = {
+    '--hero-accent': heroAccent,
+    '--hero-primary-tint': heroPrimaryTint,
+    '--hero-border-neon': heroBorderNeon,
+  } as React.CSSProperties;
+
+  const applyThemePreset = (preset: typeof THEME_PRESETS[number]) => {
+    setThemeCss(`:root {\n  --accent-glow: ${preset.accent};\n  --primary-tint: ${preset.primary};\n  --border-neon: ${preset.border};\n}`);
+  };
 
   // Parallax offsets
   const portraitOffset = { x: tilt.y * 0.3, y: tilt.x * 0.25 };
@@ -124,11 +159,19 @@ export function HeroSection({
     <section
       id="hero"
       className="snap-section flex flex-col justify-between items-center px-4 md:px-8 pt-20 md:pt-24 pb-6 relative overflow-hidden bg-[#0c0c0e] obsidian-grid-bg min-h-screen"
+      style={heroThemeStyle}
     >
       {/* Backlight / Atmosphere: Soft diffused warm amber sunset gradient (#e58a3c / #f5a623) shining softly from upper right */}
       <div className="absolute top-0 right-0 w-[65vw] h-[65vh] max-w-[850px] max-h-[850px] bg-gradient-to-bl from-[#f5a623]/22 via-[#e58a3c]/12 to-transparent blur-[150px] pointer-events-none z-0" />
       <div className="absolute bottom-0 left-0 w-[45vw] h-[45vh] max-w-[600px] max-h-[600px] bg-gradient-to-tr from-[#e58a3c]/10 via-[#f5a623]/05 to-transparent blur-[140px] pointer-events-none z-0" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-[#f5a623]/03 rounded-full blur-[200px] pointer-events-none z-0" />
+
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[1] overflow-hidden opacity-[0.16] mix-blend-screen">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(245,158,11,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(245,158,11,0.08)_1px,transparent_1px)] bg-[size:32px_32px]" />
+        <pre className="hero-code-line absolute left-[3%] top-[19%] hidden max-w-[28rem] whitespace-pre-wrap font-mono text-[10px] leading-5 text-amber-200/80 lg:block">{`interface Architecture {\n  runtime: 'Next.js' | 'Edge';\n  resilience: 'distributed';\n}`}</pre>
+        <pre className="hero-code-line hero-code-line-delayed absolute right-[4%] top-[30%] hidden max-w-[24rem] whitespace-pre-wrap font-mono text-[10px] leading-5 text-amber-200/80 xl:block">{`export async function getStaticProps() {\n  return { props: await loadProfile() };\n}`}</pre>
+        <pre className="hero-code-line absolute bottom-[18%] left-[10%] hidden max-w-[30rem] whitespace-pre-wrap font-mono text-[10px] leading-5 text-amber-200/80 md:block">{`const glowEffect = useMemo(() =>\n  createAtmosphere(theme.accent), [theme]`}</pre>
+      </div>
 
       {/* Main Hero Container */}
       <div className="w-full max-w-7xl mx-auto flex flex-col justify-between z-10 my-auto gap-6 sm:gap-8">
@@ -136,12 +179,12 @@ export function HeroSection({
         {/* Top-Level Floating Control Bar within Hero: Status Badge & Pill CTAs */}
         <div className="flex items-center justify-between gap-4 pt-1">
           {/* Top-Left: "• Open to work" status badge with bright green pulse */}
-          <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/10 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)]">
+          <div style={{ borderColor: 'var(--hero-border-neon)', boxShadow: '0 0 18px var(--hero-border-neon)' }} className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-white/[0.04] border backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)]">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10b981] opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-[#10b981] shadow-[0_0_8px_#10b981]" />
             </span>
-            <span className="text-xs font-mono font-medium text-white/90 tracking-wide">
+              <span style={{ color: 'var(--hero-accent)' }} className="text-xs font-mono font-medium tracking-wide">
               {availabilityBadge}
             </span>
             <span className="text-zinc-600 hidden sm:inline">•</span>
@@ -170,7 +213,8 @@ export function HeroSection({
             <button
               onClick={() => scrollTo('contact')}
               data-cursor="BOOK"
-              className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-gradient-to-r from-[#e58a3c] via-[#f5a623] to-[#ffd166] hover:from-[#f5a623] hover:to-[#ffd166] text-black font-extrabold text-xs uppercase tracking-wider shadow-[0_0_20px_rgba(245,166,35,0.4),0_4px_12px_rgba(0,0,0,0.5)] hover:shadow-[0_0_30px_rgba(245,166,35,0.6)] cursor-pointer transition-all hover:scale-105 active:scale-95 font-mono"
+              style={{ backgroundImage: 'linear-gradient(to right, var(--hero-accent), var(--hero-primary-tint))', boxShadow: '0 0 20px var(--hero-border-neon)' }}
+              className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-black font-extrabold text-xs uppercase tracking-wider hover:brightness-110 cursor-pointer transition-all hover:scale-105 active:scale-95 font-mono"
             >
               <Calendar className="w-3.5 h-3.5" />
               <span>Book Meeting</span>
@@ -186,15 +230,18 @@ export function HeroSection({
             
             {/* Subtitle in Warm Ochre / Amber-Gold */}
             <div className="flex items-center gap-2.5">
-              <span className="w-2 h-2 rounded-full bg-[#f5a623] shadow-[0_0_10px_#f5a623]" />
-              <h2 className="text-xs font-mono font-semibold tracking-[0.25em] text-amber-400/90 uppercase">
+              <span style={{ backgroundColor: 'var(--hero-accent)', boxShadow: '0 0 10px var(--hero-accent)' }} className="w-2 h-2 rounded-full" />
+              <h2 style={{ color: 'var(--hero-accent)' }} className="text-xs font-mono font-semibold tracking-[0.25em] uppercase">
                 {heroSubtitle}
               </h2>
             </div>
 
             <div className="space-y-3">
               <div className="hero-name-kinetic">
-                <h1 className="hero-name-gradient max-w-full break-words text-4xl font-black tracking-tight leading-[0.9] text-transparent bg-clip-text bg-gradient-to-r from-white via-amber-200 to-amber-500 bg-[length:200%_auto] drop-shadow-[0_0_35px_rgba(245,158,11,0.25)] transition-transform duration-300 hover:scale-[1.02] hover:drop-shadow-[0_0_45px_rgba(245,158,11,0.45)] sm:text-6xl md:text-7xl lg:text-8xl">
+                <h1
+                  style={{ backgroundImage: 'linear-gradient(to right, #fff, var(--hero-primary-tint), var(--hero-accent))' }}
+                  className="hero-name-gradient max-w-full break-words text-4xl font-black tracking-tight leading-[0.9] text-transparent bg-clip-text bg-gradient-to-r from-white via-amber-200 to-amber-500 bg-[length:200%_auto] animate-shimmer drop-shadow-[0_0_35px_rgba(245,158,11,0.25)] transition-transform duration-300 hover:scale-[1.02] hover:drop-shadow-[0_0_45px_rgba(245,158,11,0.45)] sm:text-6xl md:text-7xl lg:text-8xl"
+                >
                   {heroHeadline}
                 </h1>
               </div>
@@ -267,6 +314,7 @@ export function HeroSection({
               <button
                 onClick={() => scrollTo('projects')}
                 data-cursor="VIEW"
+                style={{ backgroundImage: 'linear-gradient(to right, var(--hero-accent), var(--hero-primary-tint))', boxShadow: '0 0 24px var(--hero-border-neon)' }}
                 className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-[#e58a3c] to-[#f5a623] hover:from-[#f5a623] hover:to-[#ffd166] text-black font-extrabold text-xs uppercase tracking-wider shadow-[0_0_24px_rgba(245,166,35,0.35)] cursor-pointer transition-all hover:scale-105 active:scale-95 font-mono"
               >
                 <span>Explore Projects</span>
@@ -306,12 +354,13 @@ export function HeroSection({
           </div>
 
           {/* Right Column: Full-Resolution Cinematic Portrait with Warm Amber Rim-Lighting */}
-          <div className="lg:col-span-5 flex justify-center items-center relative">
+          <div className="lg:col-span-5 flex min-w-0 flex-col justify-center items-center gap-4 relative xl:flex-row xl:items-center">
             
             {/* Diffused Warm Amber Rim-Lighting Layer directly behind the portrait */}
-            <div className="absolute -inset-4 sm:-inset-8 bg-gradient-to-tr from-[#e58a3c]/25 via-[#f5a623]/20 to-transparent blur-3xl pointer-events-none rounded-full" />
+            <div style={{ backgroundImage: 'linear-gradient(to top right, color-mix(in srgb, var(--hero-accent) 25%, transparent), color-mix(in srgb, var(--hero-primary-tint) 20%, transparent), transparent)' }} className="absolute -inset-4 sm:-inset-8 blur-3xl pointer-events-none rounded-full" />
 
             {/* Interactive 3D Frame & Blend Container */}
+            <div className="w-full min-w-0 max-w-sm sm:max-w-md xl:max-w-none xl:flex-[1.15]">
             <div
               ref={cardRef}
               onMouseMove={handleMouseMove}
@@ -321,13 +370,15 @@ export function HeroSection({
               style={{
                 transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
                 transition: isHoveringCard ? 'transform 0.1s ease-out' : 'transform 0.5s ease-out',
+                borderColor: 'var(--hero-border-neon)',
+                boxShadow: '0 25px 60px rgba(0,0,0,0.85), 0 0 35px var(--hero-border-neon), inset 0 1px 0 rgba(255,255,255,0.08)',
               }}
-              className="w-full max-w-sm sm:max-w-md rounded-3xl p-3 sm:p-4 bg-white/[0.03] border border-white/10 hover:border-[#f5a623]/45 shadow-[0_25px_60px_rgba(0,0,0,0.85),0_0_35px_rgba(245,166,35,0.18),inset_0_1px_0_rgba(255,255,255,0.08)] relative group cursor-pointer transition-all z-10 backdrop-blur-xl holographic-card"
+              className="w-full rounded-3xl p-3 sm:p-4 bg-white/[0.03] border border-white/10 relative group cursor-pointer transition-all z-10 backdrop-blur-xl holographic-card"
             >
               {/* Cursor Spotlight Effect */}
               <div
                 style={{
-                  background: `radial-gradient(circle at ${spotlightPos.x}% ${spotlightPos.y}%, rgba(245, 166, 35, 0.22) 0%, rgba(229, 138, 60, 0.08) 40%, transparent 70%)`,
+                  background: `radial-gradient(circle at ${spotlightPos.x}% ${spotlightPos.y}%, color-mix(in srgb, var(--hero-accent) 22%, transparent) 0%, color-mix(in srgb, var(--hero-primary-tint) 8%, transparent) 40%, transparent 70%)`,
                 }}
                 className="absolute inset-0 rounded-3xl pointer-events-none transition-opacity duration-300 z-20"
               />
@@ -335,10 +386,10 @@ export function HeroSection({
               {/* Card Header Pill */}
               <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-white/10 font-mono text-[11px] text-zinc-400 relative z-20">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-[#f5a623] shadow-[0_0_8px_#f5a623]" />
+                  <span style={{ backgroundColor: 'var(--hero-accent)', boxShadow: '0 0 8px var(--hero-accent)' }} className="w-2 h-2 rounded-full" />
                   <span className="text-white font-bold tracking-wider">{heroHeadline}</span>
                 </div>
-                <span className="text-[10px] text-[#f5a623] bg-[#f5a623]/15 px-2.5 py-0.5 rounded-full border border-[#f5a623]/30 font-bold font-mono">
+                <span style={{ color: 'var(--hero-accent)', backgroundColor: 'color-mix(in srgb, var(--hero-accent) 15%, transparent)', borderColor: 'var(--hero-border-neon)' }} className="text-[10px] px-2.5 py-0.5 rounded-full border font-bold font-mono">
                   DEV // ARCHITECT
                 </span>
               </div>
@@ -371,7 +422,7 @@ export function HeroSection({
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0c0c0e] via-[#0c0c0e]/30 to-transparent opacity-90 z-10 pointer-events-none" />
                 
                 {/* Amber Rim-Light Edge Halo */}
-                <div className="absolute inset-0 border border-[#f5a623]/25 rounded-2xl pointer-events-none z-15 group-hover:border-[#f5a623]/50 transition-colors shadow-[inset_0_0_20px_rgba(245,166,35,0.15)]" />
+                <div style={{ borderColor: 'var(--hero-border-neon)', boxShadow: 'inset 0 0 20px var(--hero-border-neon)' }} className="absolute inset-0 border rounded-2xl pointer-events-none z-15 transition-colors" />
 
                 {/* Top Location Chip */}
                 <div className="absolute top-3 left-3 z-20">
@@ -402,6 +453,73 @@ export function HeroSection({
                 <span className="text-[#f5a623] text-[10px] font-bold font-mono">
                   M_ZIHAD // 2026
                 </span>
+              </div>
+            </div>
+            </div>
+
+            <div className="relative z-10 w-full min-w-0 max-w-sm xl:max-w-none xl:flex-1">
+              <button
+                type="button"
+                onClick={() => setIsThemeEditorOpen((open) => !open)}
+                aria-expanded={isThemeEditorOpen}
+                className="mb-3 flex w-full items-center justify-between rounded-xl border border-white/10 bg-[#0a0d14]/90 px-4 py-3 text-left font-mono text-xs text-amber-200 xl:hidden"
+              >
+                <span className="flex items-center gap-2">
+                  <Code2 className="h-4 w-4 text-amber-400" />
+                  THEME_INSPECTOR.css
+                </span>
+                <span>{isThemeEditorOpen ? 'Hide' : 'Open'}</span>
+              </button>
+
+              <div className={`${isThemeEditorOpen ? 'block' : 'hidden'} xl:block`}>
+                <section
+                  aria-label="THEME_INSPECTOR.css live theme editor"
+                  style={{ borderColor: 'var(--hero-border-neon)', boxShadow: '0 0 28px var(--hero-border-neon)' }}
+                  className="w-full min-w-0 overflow-hidden rounded-2xl border bg-[#080b10]/95 font-mono backdrop-blur-xl"
+                >
+                  <header className="flex items-center gap-2 border-b border-white/10 bg-white/[0.035] px-3 py-2.5">
+                    <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57] shadow-[0_0_8px_rgba(255,95,87,0.45)]" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e] shadow-[0_0_8px_rgba(254,188,46,0.35)]" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-[#28c840] shadow-[0_0_8px_rgba(40,200,64,0.35)]" />
+                    <span className="min-w-0 flex-1 truncate pl-2 text-[10px] text-zinc-300">live-theme-injector.css</span>
+                    <button
+                      type="button"
+                      onClick={() => setThemeCss(DEFAULT_THEME_CSS)}
+                      className="rounded-md px-2 py-1 text-[10px] text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
+                    >
+                      Reset
+                    </button>
+                  </header>
+
+                  <div className="p-3">
+                    <div className="mb-2 flex items-center justify-between text-[9px] uppercase tracking-wider text-zinc-500">
+                      <span>THEME_INSPECTOR.css</span>
+                      <span style={{ color: 'var(--hero-accent)' }}>LIVE SESSION</span>
+                    </div>
+                    <textarea
+                      aria-label="Edit live theme CSS variables"
+                      spellCheck={false}
+                      value={themeCss}
+                      onChange={(event) => setThemeCss(event.target.value)}
+                      rows={6}
+                      className="block w-full resize-y rounded-lg border border-white/10 bg-[#05070a] p-3 font-mono text-[10px] leading-relaxed text-emerald-200 outline-none transition-colors focus:border-amber-400/50"
+                    />
+
+                    <div className="mt-3 grid grid-cols-2 gap-1.5">
+                      {THEME_PRESETS.map((preset) => (
+                        <button
+                          key={preset.name}
+                          type="button"
+                          onClick={() => applyThemePreset(preset)}
+                          className="flex min-w-0 items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.025] px-2 py-2 text-left text-[9px] text-zinc-300 transition-colors hover:border-white/25 hover:bg-white/[0.07]"
+                        >
+                          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: preset.accent, boxShadow: `0 0 8px ${preset.accent}` }} />
+                          <span className="truncate">{preset.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </section>
               </div>
             </div>
           </div>
