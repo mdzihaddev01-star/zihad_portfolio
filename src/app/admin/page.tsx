@@ -77,6 +77,20 @@ function GithubIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
+async function fetchProjects(): Promise<Project[]> {
+  if (!isSupabaseConfigured || !supabase) {
+    throw new Error('Supabase is not configured.');
+  }
+
+  const { data, error } = await supabase
+    .from('projects')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []) as Project[];
+}
+
 export default function AdminPage({ 
   defaultTab = 'overview' 
 }: { 
@@ -220,18 +234,11 @@ export default function AdminPage({
     }
 
     if (isSupabaseConfigured && supabase) {
-      void supabase
-        .from('projects')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .then(({ data, error }) => {
-          if (error) {
-            console.error('Supabase projects fetch error:', error);
-            setProjectSaveError(`Could not load projects: ${error.message}`);
-            return;
-          }
-
-          if (data) setProjects(data as Project[]);
+      void fetchProjects()
+        .then(setProjects)
+        .catch((error: { message?: string }) => {
+          console.error('Supabase projects fetch error:', error);
+          setProjectSaveError(`Could not load projects: ${error.message || JSON.stringify(error)}`);
         });
     } else {
       const localProjects = localStorage.getItem('zihad_cms_projects');
@@ -548,38 +555,39 @@ export default function AdminPage({
 
     try {
       const images = newProject.images.filter((image) => typeof image === 'string' && image.trim().length > 0);
-      const imageUrl = images[0] || newProject.image_url.trim();
+      const normalizedImages = images.length > 0 ? images : [newProject.image_url.trim()].filter(Boolean);
+      const payload = {
+        title: newProject.title.trim(),
+        description: newProject.description.trim(),
+        category: newProject.category.trim() || 'Full-Stack',
+        tags: newProject.tags.split(',').map((tag) => tag.trim()).filter(Boolean),
+        images: normalizedImages,
+        live_url: newProject.live_url.trim() || 'https://demo.dev',
+        github_url: newProject.github_url.trim() || 'https://github.com',
+        order_index: projects.length + 1,
+        featured: true,
+      };
       const { data: project, error } = await supabase
         .from('projects')
-        .insert({
-          title: newProject.title.trim(),
-          description: newProject.description.trim(),
-          category: newProject.category.trim() || 'Full-Stack',
-          tags: newProject.tags.split(',').map((tag) => tag.trim()).filter(Boolean),
-          live_url: newProject.live_url.trim() || 'https://demo.dev',
-          github_url: newProject.github_url.trim() || 'https://github.com',
-          image_url: imageUrl,
-          images: images.length > 0 ? images : [imageUrl],
-          featured: true,
-          order_index: projects.length + 1,
-        })
+        .insert([payload])
         .select('*')
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase project insert error:', error);
+        setProjectSaveError(error.message);
+        return;
+      }
       if (!project) throw new Error('Supabase did not return the inserted project row.');
 
-      const { data: refreshedProjects, error: refreshError } = await supabase
-        .from('projects')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (refreshError) {
+      try {
+        const refreshedProjects = await fetchProjects();
+        setProjects(refreshedProjects);
+      } catch (refreshError) {
         console.error('Supabase projects refresh error:', refreshError);
         setProjects((current) => [project as Project, ...current]);
-        window.alert(`Project saved, but the list could not be refreshed: ${refreshError.message}`);
-      } else {
-        setProjects((refreshedProjects ?? []) as Project[]);
+        const message = refreshError instanceof Error ? refreshError.message : JSON.stringify(refreshError);
+        window.alert(`Project saved, but the list could not be refreshed: ${message}`);
       }
     } catch (error) {
       console.error('Supabase project insert error:', error);
@@ -610,11 +618,36 @@ export default function AdminPage({
     });
   };
 
-  const deleteProject = (id: string) => {
+  const deleteProject = async (id: string) => {
     soundFx.playBlip();
-    const updated = projects.filter((p) => p.id !== id);
-    setProjects(updated);
-    localStorage.setItem('zihad_cms_projects', JSON.stringify(updated));
+    if (!isSupabaseConfigured || !supabase) {
+      window.alert('Supabase is not configured. The project was not deleted.');
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('projects').delete().eq('id', id);
+      if (error) {
+        console.error('Supabase project delete error:', error);
+        window.alert(error.message);
+        return;
+      }
+
+      setProjects((current) => current.filter((project) => project.id !== id));
+      try {
+        setProjects(await fetchProjects());
+      } catch (refreshError) {
+        console.error('Supabase projects refresh error after delete:', refreshError);
+        const message = refreshError instanceof Error ? refreshError.message : JSON.stringify(refreshError);
+        window.alert(`Project deleted, but the list could not be refreshed: ${message}`);
+      }
+    } catch (error) {
+      console.error('Supabase project delete error:', error);
+      const errorObject = error && typeof error === 'object'
+        ? error as { message?: string; details?: string }
+        : null;
+      window.alert(errorObject?.message || errorObject?.details || JSON.stringify(error) || String(error));
+    }
   };
 
   const deleteSkill = (id: string) => {
