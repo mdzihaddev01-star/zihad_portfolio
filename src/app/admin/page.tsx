@@ -97,6 +97,8 @@ export default function AdminPage({
     code_commits: 1450,
   });
   const [projects, setProjects] = useState<Project[]>(DEFAULT_PROJECTS);
+  const [projectSaveError, setProjectSaveError] = useState('');
+  const [isSavingProject, setIsSavingProject] = useState(false);
   const [skills, setSkills] = useState<Skill[]>(DEFAULT_SKILLS);
   const [certificates, setCertificates] = useState<Certificate[]>(DEFAULT_CERTIFICATES);
   const [meetings, setMeetings] = useState<Meeting[]>(DEFAULT_MEETINGS);
@@ -216,8 +218,30 @@ export default function AdminPage({
         .catch(() => {});
     }
 
-    const localProjects = localStorage.getItem('zihad_cms_projects');
-    if (localProjects) setProjects(JSON.parse(localProjects));
+    if (isSupabaseConfigured && supabase) {
+      void supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('Supabase projects fetch error:', error);
+            setProjectSaveError(`Could not load projects: ${error.message}`);
+            return;
+          }
+
+          if (data) setProjects(data as Project[]);
+        });
+    } else {
+      const localProjects = localStorage.getItem('zihad_cms_projects');
+      if (localProjects) {
+        try {
+          setProjects(JSON.parse(localProjects) as Project[]);
+        } catch (error) {
+          console.error('Local project cache parse error:', error);
+        }
+      }
+    }
 
     const localMeetings = localStorage.getItem('zihad_local_meetings');
     if (localMeetings) {
@@ -508,25 +532,52 @@ export default function AdminPage({
   };
 
   // Create Project with multi-image support
-  const createProject = (e: React.FormEvent) => {
+  const createProject = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSavingProject) return;
+
+    setProjectSaveError('');
+    if (!isSupabaseConfigured || !supabase) {
+      setProjectSaveError('Supabase is not configured. The project was not saved.');
+      return;
+    }
+
     soundFx.playFanfare();
-    const project: Project = {
-      id: Date.now().toString(),
-      title: newProject.title,
-      description: newProject.description,
-      category: newProject.category,
-      tags: newProject.tags.split(',').map((t) => t.trim()),
-      live_url: newProject.live_url || 'https://demo.dev',
-      github_url: newProject.github_url || 'https://github.com',
-      image_url: newProject.images[0] || newProject.image_url,
-      images: newProject.images.length > 0 ? newProject.images : [newProject.image_url],
-      featured: true,
-    };
-    const updated = [project, ...projects];
-    setProjects(updated);
-    localStorage.setItem('zihad_cms_projects', JSON.stringify(updated));
+    setIsSavingProject(true);
+
+    try {
+      const { data: project, error } = await supabase
+        .from('projects')
+        .insert({
+          title: newProject.title.trim(),
+          description: newProject.description.trim(),
+          category: newProject.category.trim() || 'Full-Stack',
+          tags: newProject.tags.split(',').map((tag) => tag.trim()).filter(Boolean),
+          live_url: newProject.live_url.trim() || 'https://demo.dev',
+          github_url: newProject.github_url.trim() || 'https://github.com',
+          image_url: newProject.images[0] || newProject.image_url,
+          images: newProject.images.length > 0 ? newProject.images : [newProject.image_url],
+          featured: true,
+          order_index: projects.length + 1,
+        })
+        .select('*')
+        .single();
+
+      if (error) throw error;
+      if (!project) throw new Error('Supabase did not return the inserted project row.');
+
+      setProjects((current) => [project as Project, ...current]);
+    } catch (error) {
+      console.error('Supabase project insert error:', error);
+      const message = error instanceof Error ? error.message : String(error);
+      setProjectSaveError(`Project was not saved: ${message}`);
+      return;
+    } finally {
+      setIsSavingProject(false);
+    }
+
     setIsModalOpen(false);
+    setProjectSaveError('');
     setNewProject({
       title: '',
       description: '',
@@ -2325,6 +2376,11 @@ export default function AdminPage({
 
             {modalType === 'project' ? (
               <form onSubmit={createProject} className="space-y-3 font-mono text-xs">
+                {projectSaveError && (
+                  <p role="alert" className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-rose-300">
+                    {projectSaveError}
+                  </p>
+                )}
                 <div>
                   <label className="text-zinc-400 mb-1 block">Title *</label>
                   <input
@@ -2445,9 +2501,10 @@ export default function AdminPage({
 
                 <button
                   type="submit"
-                  className="w-full py-3 rounded-xl bg-amber-400 text-black font-extrabold uppercase tracking-wider hover:bg-amber-300 mt-2 cursor-pointer shadow-lg font-mono"
+                  disabled={isSavingProject}
+                  className="w-full py-3 rounded-xl bg-amber-400 text-black font-extrabold uppercase tracking-wider hover:bg-amber-300 mt-2 cursor-pointer shadow-lg font-mono disabled:cursor-wait disabled:opacity-60"
                 >
-                  Publish Project to CMS
+                  {isSavingProject ? 'Saving Project...' : 'Publish Project to CMS'}
                 </button>
               </form>
             ) : (
