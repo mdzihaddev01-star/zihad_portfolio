@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useTheme } from 'next-themes';
 import { useLanguage } from '@/lib/languageContext';
 import { soundFx } from '@/lib/soundFx';
+import { useSiteSettings } from '@/lib/useSiteSettings';
 import { SupportedLanguage, SiteSettings } from '@/types/portfolio';
 import { 
   Globe, 
@@ -47,42 +48,11 @@ export function DesktopHeader({
   const { language, setLanguage } = useLanguage();
   const [mounted, setMounted] = useState(false);
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
-  const [currentSettings, setCurrentSettings] = useState<SiteSettings | null>(initialSettings || null);
-  const [imgError, setImgError] = useState(false);
+  const currentSettings = useSiteSettings(initialSettings);
 
   useEffect(() => {
     setMounted(true);
-    // Load local settings if initialSettings not provided
-    if (!initialSettings) {
-      const saved = localStorage.getItem('zihad_portfolio_settings');
-      if (saved) {
-        try {
-          setCurrentSettings(JSON.parse(saved));
-        } catch {
-          // ignore
-        }
-      }
-    }
-
-    // Listen to storage changes to update navbar instantly when saved in admin
-    const handleStorageChange = () => {
-      const saved = localStorage.getItem('zihad_portfolio_settings');
-      if (saved) {
-        try {
-          setCurrentSettings(JSON.parse(saved));
-        } catch {
-          // ignore
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('zihad_settings_updated', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('zihad_settings_updated', handleStorageChange);
-    };
-  }, [initialSettings]);
+  }, []);
 
   const languages: { code: SupportedLanguage; label: string; flag: string }[] = [
     { code: 'en', label: 'English', flag: '🇺🇸' },
@@ -113,7 +83,7 @@ export function DesktopHeader({
   // Dynamic CMS branding variables
   const fullName = currentSettings?.full_name || 'MOHAMMAD ZIHAD';
   const subtitle = currentSettings?.tagline ? 'DEV // FULLSTACK' : 'DEV // FULLSTACK';
-  const logoUrl = currentSettings?.logo_url;
+  const logoUrl = currentSettings?.logo_url?.trim();
 
   return (
     <header className="hidden md:flex fixed top-4 inset-x-0 z-50 justify-center px-4 pointer-events-none">
@@ -129,12 +99,13 @@ export function DesktopHeader({
           {/* Glowing Neon-Bordered Circle in Warm Golden Amber */}
           <div className="relative w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-[#e58a3c] via-[#f5a623] to-[#ffd166] shadow-[0_0_15px_rgba(245,166,35,0.65),0_0_28px_rgba(229,138,60,0.35)] group-hover:shadow-[0_0_24px_rgba(245,166,35,0.85)] transition-all duration-300 flex items-center justify-center shrink-0">
             <div className="w-full h-full bg-[#0c0c0e] rounded-full overflow-hidden flex items-center justify-center">
-              {logoUrl && !imgError ? (
+              {logoUrl ? (
                 <img
                   src={logoUrl}
                   alt={fullName}
                   className="w-full h-full object-cover rounded-full group-hover:scale-105 transition-transform duration-300"
-                  onError={() => setImgError(true)}
+                  loading="eager"
+                  decoding="async"
                 />
               ) : (
                 <span className="text-[11px] font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-tr from-[#f5a623] via-[#ffd166] to-white font-mono group-hover:brightness-125 transition-all">

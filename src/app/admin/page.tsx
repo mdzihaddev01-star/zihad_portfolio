@@ -91,15 +91,29 @@ async function fetchProjects(): Promise<Project[]> {
   return (data ?? []) as Project[];
 }
 
+async function fetchEducation(): Promise<Education[]> {
+  if (!isSupabaseConfigured || !supabase) {
+    throw new Error('Supabase is not configured.');
+  }
+
+  const { data, error } = await supabase
+    .from('education')
+    .select('*')
+    .order('order_index', { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []) as Education[];
+}
+
 export default function AdminPage({ 
   defaultTab = 'overview' 
 }: { 
-  defaultTab?: 'overview' | 'settings' | 'counters' | 'projects' | 'skills' | 'certificates' | 'meetings' | 'reviews' | 'analytics' 
+  defaultTab?: 'overview' | 'settings' | 'counters' | 'projects' | 'skills' | 'education' | 'certificates' | 'meetings' | 'reviews' | 'analytics' 
 } = {}) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passcode, setPasscode] = useState('');
   const [authError, setAuthError] = useState('');
-  const [activeTab, setActiveTab] = useState<'overview' | 'settings' | 'counters' | 'projects' | 'skills' | 'certificates' | 'meetings' | 'reviews' | 'analytics'>(defaultTab);
+  const [activeTab, setActiveTab] = useState<'overview' | 'settings' | 'counters' | 'projects' | 'skills' | 'education' | 'certificates' | 'meetings' | 'reviews' | 'analytics'>(defaultTab);
 
   // CMS State
   const [profile, setProfile] = useState<ProfileSettings>(DEFAULT_PROFILE);
@@ -115,6 +129,17 @@ export default function AdminPage({
   const [isSavingProject, setIsSavingProject] = useState(false);
   const [projectSavedToast, setProjectSavedToast] = useState(false);
   const [skills, setSkills] = useState<Skill[]>(DEFAULT_SKILLS);
+  const [education, setEducation] = useState<Education[]>(isSupabaseConfigured ? [] : DEFAULT_EDUCATION);
+  const [educationError, setEducationError] = useState('');
+  const [isSavingEducation, setIsSavingEducation] = useState(false);
+  const [editingEducationId, setEditingEducationId] = useState<string | null>(null);
+  const [educationForm, setEducationForm] = useState({
+    degree: '',
+    institution: '',
+    years: '',
+    description: '',
+    order_index: 1,
+  });
   const [certificates, setCertificates] = useState<Certificate[]>(DEFAULT_CERTIFICATES);
   const [meetings, setMeetings] = useState<Meeting[]>(DEFAULT_MEETINGS);
   const [testimonials, setTestimonials] = useState<Testimonial[]>(DEFAULT_TESTIMONIALS);
@@ -169,7 +194,7 @@ export default function AdminPage({
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const tabParam = params.get('tab');
-      if (tabParam && ['overview', 'settings', 'counters', 'projects', 'skills', 'certificates', 'meetings', 'reviews', 'analytics'].includes(tabParam)) {
+      if (tabParam && ['overview', 'settings', 'counters', 'projects', 'skills', 'education', 'certificates', 'meetings', 'reviews', 'analytics'].includes(tabParam)) {
         setActiveTab(tabParam as any);
       } else if (window.location.hash === '#settings' || window.location.pathname.endsWith('/settings')) {
         setActiveTab('settings');
@@ -240,6 +265,14 @@ export default function AdminPage({
           console.error('Supabase projects fetch error:', error);
           setProjectSaveError(`Could not load projects: ${error.message || JSON.stringify(error)}`);
         });
+
+      void fetchEducation()
+        .then(setEducation)
+        .catch((error: { message?: string }) => {
+          console.error('Supabase education fetch error:', error);
+          setEducationError(error.message || JSON.stringify(error));
+          setEducation(DEFAULT_EDUCATION);
+        });
     } else {
       const localProjects = localStorage.getItem('zihad_cms_projects');
       if (localProjects) {
@@ -279,22 +312,57 @@ export default function AdminPage({
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     soundFx.playFanfare();
-    localStorage.setItem('zihad_profile_settings', JSON.stringify(profile));
-    localStorage.setItem('zihad_portfolio_settings', JSON.stringify(profile));
+    const settingsPayload = {
+      ...toSiteSettingsRecord(profile),
+      favicon_url: profile.favicon_url || '/favicon.ico',
+      academic_standing: profile.academic_standing || profile.about_academic || 'SSC_27',
+      bio_paragraph_1: profile.bio_paragraph_1 || profile.about_bio || profile.bio,
+      about_headline: profile.about_headline || profile.about_heading || 'ABOUT MOHAMMAD ZIHAD',
+      eyebrow_text: profile.eyebrow_text || profile.hero_eyebrow || '',
+      hero_headline: profile.hero_headline || profile.full_name,
+      availability_badge: profile.availability_badge || profile.availability || '',
+      updated_at: new Date().toISOString(),
+    };
+
     if (isSupabaseConfigured && supabase) {
       try {
-        const { error } = await supabase
+        const { data: updatedSettings, error } = await supabase
           .from('site_settings')
-          .upsert({
-            ...toSiteSettingsRecord(profile),
-            favicon_url: profile.favicon_url || '/favicon.ico',
-            id: SITE_SETTINGS_ID,
-            updated_at: new Date().toISOString(),
-          });
-        if (error) console.warn('Site settings upsert error:', error);
+          .update(settingsPayload)
+          .eq('id', SITE_SETTINGS_ID)
+          .select('*')
+          .maybeSingle();
+        if (error) throw error;
+
+        let savedSettings = updatedSettings;
+        if (!savedSettings) {
+          const { data, error: upsertError } = await supabase
+            .from('site_settings')
+            .upsert({ ...settingsPayload, id: SITE_SETTINGS_ID })
+            .select('*')
+            .single();
+          if (upsertError) throw upsertError;
+          savedSettings = data;
+        }
+
+        if (savedSettings) {
+          setProfile((prev) => ({ ...prev, ...savedSettings }));
+          localStorage.setItem('zihad_profile_settings', JSON.stringify(savedSettings));
+          localStorage.setItem('zihad_portfolio_settings', JSON.stringify(savedSettings));
+        }
       } catch (err) {
         console.warn('Site settings upsert error:', err);
+        const errorObject = err && typeof err === 'object'
+          ? err as { message?: string; details?: string }
+          : null;
+        const message = errorObject?.message || errorObject?.details || JSON.stringify(err) || String(err);
+        window.alert(`Settings could not be saved: ${message}`);
+        return;
       }
+    } else {
+      setProfile((prev) => ({ ...prev, ...settingsPayload }));
+      localStorage.setItem('zihad_profile_settings', JSON.stringify(settingsPayload));
+      localStorage.setItem('zihad_portfolio_settings', JSON.stringify(settingsPayload));
     }
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new Event('zihad_settings_updated'));
@@ -497,7 +565,50 @@ export default function AdminPage({
       const reader = new FileReader();
       reader.onload = () => {
         if (typeof reader.result === 'string') {
-          setProfile((prev) => ({ ...prev, [field]: reader.result }));
+          const imageUrl = reader.result;
+          setProfile((prev) => ({ ...prev, [field]: imageUrl }));
+
+          void (async () => {
+            if (!isSupabaseConfigured || !supabase) {
+              window.alert('Supabase is not configured. The image preview is local only.');
+              return;
+            }
+
+            const updatePayload = {
+              [field]: imageUrl,
+              updated_at: new Date().toISOString(),
+            };
+
+            try {
+              const { data, error } = await supabase
+                .from('site_settings')
+                .update(updatePayload)
+                .eq('id', SITE_SETTINGS_ID)
+                .select('id')
+                .maybeSingle();
+
+              if (error) throw error;
+              if (!data) {
+                const { error: upsertError } = await supabase
+                  .from('site_settings')
+                  .upsert({ id: SITE_SETTINGS_ID, ...updatePayload });
+                if (upsertError) throw upsertError;
+              }
+
+              const updatedProfile = { ...profile, [field]: imageUrl };
+              localStorage.setItem('zihad_profile_settings', JSON.stringify(updatedProfile));
+              localStorage.setItem('zihad_portfolio_settings', JSON.stringify(updatedProfile));
+              window.dispatchEvent(new Event('zihad_settings_updated'));
+              setSettingsSavedToast(true);
+              window.setTimeout(() => setSettingsSavedToast(false), 3000);
+            } catch (error) {
+              console.error(`Supabase ${field} upload save error:`, error);
+              const errorObject = error && typeof error === 'object'
+                ? error as { message?: string; details?: string }
+                : null;
+              window.alert(`Image could not be saved: ${errorObject?.message || errorObject?.details || JSON.stringify(error) || String(error)}`);
+            }
+          })();
         }
       };
       reader.readAsDataURL(file);
@@ -654,6 +765,97 @@ export default function AdminPage({
   const deleteSkill = (id: string) => {
     soundFx.playBlip();
     setSkills(skills.filter((s) => s.id !== id));
+  };
+
+  const resetEducationForm = (nextOrderIndex = education.length + 1) => {
+    setEditingEducationId(null);
+    setEducationForm({
+      degree: '',
+      institution: '',
+      years: '',
+      description: '',
+      order_index: nextOrderIndex,
+    });
+  };
+
+  const editEducation = (item: Education) => {
+    setEducationError('');
+    setEditingEducationId(item.id);
+    setEducationForm({
+      degree: item.degree || '',
+      institution: item.institution || '',
+      years: [item.start_year, item.end_year].filter(Boolean).join(' - '),
+      description: item.description || '',
+      order_index: item.order_index ?? education.length + 1,
+    });
+  };
+
+  const saveEducation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSavingEducation) return;
+    setEducationError('');
+
+    if (!isSupabaseConfigured || !supabase) {
+      setEducationError('Supabase is not configured. Education changes cannot be saved.');
+      return;
+    }
+
+    const years = educationForm.years.split(/\s*(?:-|[\u2013\u2014]|to)\s*/i).filter(Boolean);
+    if (years.length < 2) {
+      setEducationError('Enter a start and end year, for example: 2024 - 2026.');
+      return;
+    }
+
+    const payload = {
+      degree: educationForm.degree.trim(),
+      institution: educationForm.institution.trim(),
+      start_year: years[0].trim(),
+      end_year: years[years.length - 1].trim(),
+      description: educationForm.description.trim(),
+      order_index: Number(educationForm.order_index),
+    };
+
+    setIsSavingEducation(true);
+    try {
+      const query = editingEducationId
+        ? supabase.from('education').update(payload).eq('id', editingEducationId)
+        : supabase.from('education').insert([payload]);
+      const { error } = await query;
+      if (error) throw error;
+
+      const refreshedEducation = await fetchEducation();
+      setEducation(refreshedEducation);
+      resetEducationForm(refreshedEducation.length + 1);
+    } catch (error) {
+      console.error('Supabase education save error:', error);
+      const errorObject = error && typeof error === 'object'
+        ? error as { message?: string; details?: string }
+        : null;
+      setEducationError(errorObject?.message || errorObject?.details || JSON.stringify(error) || String(error));
+    } finally {
+      setIsSavingEducation(false);
+    }
+  };
+
+  const deleteEducation = async (id: string) => {
+    if (!isSupabaseConfigured || !supabase) {
+      window.alert('Supabase is not configured. The milestone was not deleted.');
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('education').delete().eq('id', id);
+      if (error) throw error;
+      const refreshedEducation = await fetchEducation();
+      setEducation(refreshedEducation);
+      if (editingEducationId === id) resetEducationForm(refreshedEducation.length + 1);
+    } catch (error) {
+      console.error('Supabase education delete error:', error);
+      const errorObject = error && typeof error === 'object'
+        ? error as { message?: string; details?: string }
+        : null;
+      window.alert(errorObject?.message || errorObject?.details || JSON.stringify(error) || String(error));
+    }
   };
 
   const createSkill = (e: React.FormEvent) => {
@@ -813,6 +1015,7 @@ export default function AdminPage({
               { id: 'counters', label: 'Live Counters', icon: Hash },
               { id: 'projects', label: `Projects (${projects.length})`, icon: Briefcase },
               { id: 'skills', label: `Skills (${skills.length})`, icon: Layers },
+              { id: 'education', label: `Academic Milestones (${education.length})`, icon: GraduationCap },
               { id: 'certificates', label: `Certificates (${certificates.length})`, icon: Award },
               { id: 'meetings', label: `Bookings (${meetings.length})`, icon: Calendar },
               { 
@@ -1266,8 +1469,8 @@ export default function AdminPage({
                     <label className="text-zinc-400 mb-1 block">Eyebrow Label Text</label>
                     <input
                       type="text"
-                      value={profile.hero_eyebrow || 'INDEPENDENT DEVELOPER / DIGITAL ARCHITECT'}
-                      onChange={(e) => setProfile({ ...profile, hero_eyebrow: e.target.value })}
+                      value={profile.eyebrow_text || profile.hero_eyebrow || 'INDEPENDENT DEVELOPER / DIGITAL ARCHITECT'}
+                      onChange={(e) => setProfile({ ...profile, eyebrow_text: e.target.value, hero_eyebrow: e.target.value })}
                       className="w-full bg-[#0c0c0e] border border-zinc-800 rounded-xl p-3 text-white focus:outline-none focus:border-amber-400"
                     />
                   </div>
@@ -1297,8 +1500,8 @@ export default function AdminPage({
                     <label className="text-zinc-400 mb-1 block">Availability Status Badge</label>
                     <input
                       type="text"
-                      value={profile.availability || 'AVAILABLE FOR SELECT PROJECTS · 2026'}
-                      onChange={(e) => setProfile({ ...profile, availability: e.target.value })}
+                      value={profile.availability_badge || profile.availability || 'AVAILABLE FOR SELECT PROJECTS · 2026'}
+                      onChange={(e) => setProfile({ ...profile, availability_badge: e.target.value })}
                       className="w-full bg-[#0c0c0e] border border-zinc-800 rounded-xl p-3 text-white focus:outline-none focus:border-amber-400"
                     />
                   </div>
@@ -1346,8 +1549,8 @@ export default function AdminPage({
                     <label className="text-zinc-400 mb-1 block">Section Headline</label>
                     <input
                       type="text"
-                      value={profile.about_heading || 'ABOUT MOHAMMAD ZIHAD'}
-                      onChange={(e) => setProfile({ ...profile, about_heading: e.target.value })}
+                      value={profile.about_headline || profile.about_heading || 'ABOUT MOHAMMAD ZIHAD'}
+                      onChange={(e) => setProfile({ ...profile, about_headline: e.target.value, about_heading: e.target.value })}
                       className="w-full bg-[#0c0c0e] border border-zinc-800 rounded-xl p-3 text-white focus:outline-none focus:border-amber-400"
                     />
                   </div>
@@ -1356,8 +1559,8 @@ export default function AdminPage({
                     <label className="text-zinc-400 mb-1 block">Academic Degree Standing</label>
                     <input
                       type="text"
-                      value={(profile as any).about_academic || 'B.Sc. CSE (Honors)'}
-                      onChange={(e) => setProfile({ ...profile, about_academic: e.target.value } as any)}
+                      value={profile.academic_standing || profile.about_academic || 'SSC_27'}
+                      onChange={(e) => setProfile({ ...profile, academic_standing: e.target.value, about_academic: e.target.value })}
                       className="w-full bg-[#0c0c0e] border border-zinc-800 rounded-xl p-3 text-white focus:outline-none focus:border-amber-400"
                     />
                   </div>
@@ -1366,8 +1569,8 @@ export default function AdminPage({
                     <label className="text-zinc-400 mb-1 block">Biography Paragraph (Paragraph 1)</label>
                     <textarea
                       rows={3}
-                      value={(profile as any).about_bio || profile.bio}
-                      onChange={(e) => setProfile({ ...profile, about_bio: e.target.value } as any)}
+                      value={profile.bio_paragraph_1 || profile.about_bio || profile.bio}
+                      onChange={(e) => setProfile({ ...profile, bio_paragraph_1: e.target.value, about_bio: e.target.value })}
                       className="w-full bg-[#0c0c0e] border border-zinc-800 rounded-xl p-3 text-white resize-none focus:outline-none focus:border-amber-400"
                     />
                   </div>
@@ -1833,7 +2036,142 @@ export default function AdminPage({
         )}
 
         {/* ------------------------------------------------------------------- */}
-        {/* TAB 5: CERTIFICATES MANAGEMENT */}
+        {/* TAB: EDUCATION MANAGEMENT */}
+        {activeTab === 'education' && (
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.8fr)] gap-5">
+            <div className="obsidian-card rounded-3xl p-6 border border-zinc-800 space-y-4">
+              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                <div>
+                  <h3 className="text-sm font-bold text-white uppercase font-mono">Academic Milestones</h3>
+                  <p className="text-xs text-zinc-400 font-mono mt-1">{education.length} milestones</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => resetEducationForm()}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-400 text-black text-xs font-bold font-mono"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Milestone</span>
+                </button>
+              </div>
+
+              {educationError && (
+                <p role="alert" className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-300 font-mono">
+                  {educationError}
+                </p>
+              )}
+
+              <div className="space-y-3">
+                {education.map((item) => (
+                  <div key={item.id} className="flex items-start justify-between gap-4 rounded-2xl bg-[#0c0c0e] border border-zinc-800 p-4">
+                    <div className="min-w-0">
+                      <h4 className="text-sm font-bold text-white">{item.degree}</h4>
+                      <p className="text-xs text-amber-300 mt-1">{item.institution}</p>
+                      <p className="text-[11px] text-zinc-400 font-mono mt-1">{item.start_year} - {item.end_year} · Order {item.order_index ?? 0}</p>
+                      {item.description && <p className="text-xs text-zinc-400 mt-2">{item.description}</p>}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => editEducation(item)}
+                        aria-label={`Edit ${item.degree}`}
+                        className="p-2 rounded-lg text-zinc-400 hover:text-amber-300 hover:bg-white/5"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void deleteEducation(item.id)}
+                        aria-label={`Delete ${item.degree}`}
+                        className="p-2 rounded-lg text-zinc-400 hover:text-rose-400 hover:bg-white/5"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {education.length === 0 && (
+                  <p className="py-8 text-center text-xs text-zinc-500 font-mono">No academic milestones yet.</p>
+                )}
+              </div>
+            </div>
+
+            <form onSubmit={saveEducation} className="obsidian-card rounded-3xl p-6 border border-zinc-800 space-y-4 h-fit">
+              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                <h3 className="text-sm font-bold text-white uppercase font-mono">
+                  {editingEducationId ? 'Edit Milestone' : 'Add Milestone'}
+                </h3>
+                {editingEducationId && (
+                  <button type="button" onClick={() => resetEducationForm()} className="text-xs text-zinc-400 hover:text-white font-mono">
+                    Cancel Edit
+                  </button>
+                )}
+              </div>
+
+              <label className="block text-xs text-zinc-400 font-mono">
+                Degree / Title
+                <input
+                  required
+                  value={educationForm.degree}
+                  onChange={(e) => setEducationForm((form) => ({ ...form, degree: e.target.value }))}
+                  placeholder="Secondary School Certificate (SSC)"
+                  className="mt-1.5 w-full rounded-xl border border-zinc-800 bg-[#0c0c0e] p-3 text-white"
+                />
+              </label>
+              <label className="block text-xs text-zinc-400 font-mono">
+                Institution
+                <input
+                  required
+                  value={educationForm.institution}
+                  onChange={(e) => setEducationForm((form) => ({ ...form, institution: e.target.value }))}
+                  placeholder="Uttara High School & College"
+                  className="mt-1.5 w-full rounded-xl border border-zinc-800 bg-[#0c0c0e] p-3 text-white"
+                />
+              </label>
+              <div className="grid grid-cols-[1fr_120px] gap-3">
+                <label className="block text-xs text-zinc-400 font-mono">
+                  Duration / Years
+                  <input
+                    required
+                    value={educationForm.years}
+                    onChange={(e) => setEducationForm((form) => ({ ...form, years: e.target.value }))}
+                    placeholder="2024 - 2026"
+                    className="mt-1.5 w-full rounded-xl border border-zinc-800 bg-[#0c0c0e] p-3 text-white"
+                  />
+                </label>
+                <label className="block text-xs text-zinc-400 font-mono">
+                  Order Index
+                  <input
+                    required
+                    type="number"
+                    min="0"
+                    value={educationForm.order_index}
+                    onChange={(e) => setEducationForm((form) => ({ ...form, order_index: Number(e.target.value) }))}
+                    className="mt-1.5 w-full rounded-xl border border-zinc-800 bg-[#0c0c0e] p-3 text-white"
+                  />
+                </label>
+              </div>
+              <label className="block text-xs text-zinc-400 font-mono">
+                Description / Achievements
+                <textarea
+                  rows={4}
+                  value={educationForm.description}
+                  onChange={(e) => setEducationForm((form) => ({ ...form, description: e.target.value }))}
+                  className="mt-1.5 w-full resize-y rounded-xl border border-zinc-800 bg-[#0c0c0e] p-3 text-white"
+                />
+              </label>
+              <button
+                type="submit"
+                disabled={isSavingEducation}
+                className="w-full rounded-xl bg-amber-400 py-3 text-xs font-bold uppercase text-black font-mono disabled:opacity-60"
+              >
+                {isSavingEducation ? 'Saving...' : editingEducationId ? 'Save Changes' : 'Add Milestone'}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* TAB: CERTIFICATES MANAGEMENT */}
         {/* ------------------------------------------------------------------- */}
         {activeTab === 'certificates' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

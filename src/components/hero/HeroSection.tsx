@@ -98,9 +98,10 @@ export function HeroSection({
   };
 
   // Dynamic Content with safe fallbacks
-  const heroSubtitle = settings?.tagline || 'Full-Stack Developer & Software Architect';
-  const heroHeadline = settings?.full_name || 'Mohammad Zihad';
-  const heroBio = settings?.bio || 'Architecting high-performance spatial web applications, distributed edge microservices, and kinetic digital products with mathematical craftsmanship.';
+  const heroSubtitle = settings?.eyebrow_text || settings?.hero_eyebrow || settings?.tagline || 'Full-Stack Developer & Software Architect';
+  const heroHeadline = settings?.hero_headline || settings?.full_name || 'Mohammad Zihad';
+  const heroBio = settings?.hero_descriptor || settings?.bio || 'Architecting high-performance spatial web applications, distributed edge microservices, and kinetic digital products with mathematical craftsmanship.';
+  const availabilityBadge = settings?.availability_badge || 'Open to work';
   const portraitUrl = settings?.avatar_url || settings?.hero_portrait_url || '/images/mohammad_zihad.jpg';
   const emailAddress = settings?.contact_email || settings?.public_email || '';
   const linkedinUrl = settings?.social_linkedin || 'https://linkedin.com/in/mohammadzihad';
@@ -141,11 +142,11 @@ export function HeroSection({
               <span className="relative inline-flex rounded-full h-2 w-2 bg-[#10b981] shadow-[0_0_8px_#10b981]" />
             </span>
             <span className="text-xs font-mono font-medium text-white/90 tracking-wide">
-              Open to work
+              {availabilityBadge}
             </span>
             <span className="text-zinc-600 hidden sm:inline">•</span>
             <span className="text-[11px] font-mono text-zinc-400 hidden sm:inline">
-              Available Q4 2026
+              {settings?.availability || 'Available Q4 2026'}
             </span>
           </div>
 

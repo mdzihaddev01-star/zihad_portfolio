@@ -5,41 +5,47 @@ import {
   isSupabaseConfigured, 
   DEFAULT_SETTINGS, 
   DEFAULT_PROJECTS, 
-  DEFAULT_SKILLS, 
-  DEFAULT_EDUCATION 
+  DEFAULT_SKILLS
 } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
   try {
-    const { message, language } = await req.json();
+    const { message, language, history: rawHistory } = await req.json();
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
 
     const trimmedMessage = message.trim();
+    const history = Array.isArray(rawHistory)
+      ? rawHistory
+          .filter((item): item is { role: 'user' | 'assistant'; content: string } =>
+            item &&
+            (item.role === 'user' || item.role === 'assistant') &&
+            typeof item.content === 'string' &&
+            item.content.trim().length > 0
+          )
+          .slice(-16)
+          .map((item) => ({ role: item.role, content: item.content.trim().slice(0, 4000) }))
+      : [];
 
     // -------------------------------------------------------------------------
     // 1. DYNAMIC DEVELOPER KNOWLEDGE CONTEXT (SUPABASE WITH ZERO-FALLBACK GAPS)
     // -------------------------------------------------------------------------
     let profileData = DEFAULT_SETTINGS;
-    let projectsData = DEFAULT_PROJECTS;
-    let skillsData = DEFAULT_SKILLS;
-    let educationData = DEFAULT_EDUCATION;
-
+    let projectsData: typeof DEFAULT_PROJECTS = [];
+    let skillsData: typeof DEFAULT_SKILLS = [];
     if (isSupabaseConfigured && supabase) {
       try {
-        const [settingsData, projRes, skillsRes, eduRes] = await Promise.all([
+        const [settingsData, projRes, skillsRes] = await Promise.all([
           fetchSiteSettings(),
           supabase.from('projects').select('*').order('order_index', { ascending: true }),
           supabase.from('skills').select('*').order('order_index', { ascending: true }),
-          supabase.from('education').select('*').order('order_index', { ascending: true }),
         ]);
 
         if (settingsData) profileData = { ...DEFAULT_SETTINGS, ...settingsData };
         if (projRes.data && projRes.data.length > 0) projectsData = projRes.data;
         if (skillsRes.data && skillsRes.data.length > 0) skillsData = skillsRes.data;
-        if (eduRes.data && eduRes.data.length > 0) educationData = eduRes.data;
       } catch (dbErr) {
         console.warn('Supabase profile context fetch warning (using verified defaults):', dbErr);
       }
@@ -47,86 +53,78 @@ export async function POST(req: NextRequest) {
 
     const projectsSummary = projectsData
       .map((p) => `- ${p.title} (${p.category}): ${p.description}. Tech: ${p.tags.join(', ')}. Demo: ${p.live_url}, GitHub: ${p.github_url || 'N/A'}`)
-      .join('\n');
+      .join('\n') || 'No additional project records are currently available.';
 
     const skillsSummary = skillsData
       .map((s) => `- ${s.name} (${s.category}): ${s.proficiency || (s as any).level || 90}% proficiency`)
-      .join('\n');
+      .join('\n') || 'No additional skills records are currently available.';
 
-    const educationSummary = educationData
-      .map((e) => `- ${e.degree} at ${e.institution} (${e.start_year} - ${e.end_year}). ${e.field_of_study || ''}. ${e.description || ''}`)
-      .join('\n');
-
-    // Canonical Developer Contact Details
-    const primaryEmail = profileData.contact_email || profileData.public_email || '';
-    const altEmail = profileData.public_email || primaryEmail;
-    const primaryPhone = profileData.public_phone || profileData.phone || '';
+    const primaryEmail = 'mdzihaddev01@gmail.com';
+    const altEmail = primaryEmail;
+    const primaryPhone = '+880 1410057535';
     const githubUrl = profileData.social_github || 'https://github.com/mohammadzihad';
     const linkedinUrl = profileData.social_linkedin || 'https://linkedin.com/in/mohammadzihad';
     const twitterUrl = profileData.social_twitter || 'https://twitter.com/mohammadzihad';
-    const location = profileData.public_address || profileData.address || profileData.city_country || profileData.location || '';
+    const location = 'Uttara, Dhaka, Bangladesh';
 
     // -------------------------------------------------------------------------
     // 2. SYSTEM INSTRUCTION (ZERO HALLUCINATION & MULTILINGUAL RULES)
     // -------------------------------------------------------------------------
     const systemInstruction = `
-You are "Ask ZORRO", the autonomous AI profile assistant and technical representative of Mohammad Zihad.
-Mohammad Zihad is a senior Creative Full-Stack Developer, Software Engineer, and Digital Architect based in Dhaka, Bangladesh (UTC+6).
+You are ZORRO, the intelligent, friendly, and precise AI representative for Mohammad Zihad.
+Always respond in the exact language the user talks to you (Bengali, Banglish, or English).
+Be direct, natural, and helpful. Do not repeat greeting introductions if the conversation is ongoing.
 
-PRIMARY CONTACT INFORMATION (CRITICAL: When asked for email, gmail, phone, github, linkedin, or socials, output these immediately and accurately):
-- Gmail / Primary Email: ${primaryEmail} (Alternative: ${altEmail})
-- Phone / WhatsApp: ${primaryPhone}
+Knowledge Base about Mohammad Zihad:
+- Full Name: Mohammad Zihad
+- Role: Full-Stack Developer & Software Architect
+- Education / School: Student at Uttara High School & College (UHSC), SSC candidate (SSC '27).
+- Major Projects:
+  1. UHSC Debate Club Web Ecosystem (Full-Stack Next.js, Supabase, Tailwind platform).
+  2. SPRA Enterprise Rice Milling ERP & POS (Automated inventory & accounting software for মেসার্স শাহ পরান রাইস এজেন্সি).
+  3. Shah Poran Agency Organic Agro E-Commerce platform.
+  4. Bengal Merchants Global Logistics & Sourcing system.
+- Core Skills: Next.js, React, TypeScript, Tailwind CSS, Supabase, PostgreSQL, Node.js, WebGL/Three.js, Python.
+- Contact Email: ${primaryEmail}
+- Phone: ${primaryPhone}
 - Location: ${location}
 - GitHub: ${githubUrl}
 - LinkedIn: ${linkedinUrl}
 - Twitter / X: ${twitterUrl}
-- Meeting Booking: Section 7 of this portfolio (#contact) or via direct email.
 
-DEVELOPER PROFILE & IDENTITY:
-- Full Name: Mohammad Zihad
-- Profession: Creative Full-Stack Developer & Software Architect
-- Bio: ${profileData.bio}
-- Availability: ${profileData.availability || 'Available for global contracts, remote roles, and high-impact engineering projects'}
+Additional live portfolio data, when relevant:
+- Profile bio: ${profileData.bio}
+- Availability: ${profileData.availability || 'Not specified'}
+- Projects: ${projectsSummary}
+- Skills: ${skillsSummary}
 
-TECHNICAL ARSENAL & SKILLS:
-${skillsSummary}
-
-FEATURED PROJECTS SHOWCASE:
-${projectsSummary}
-
-ACADEMIC CREDENTIALS & EDUCATION:
-${educationSummary}
-
-COMMUNICATION & MULTILINGUAL RULES (MANDATORY):
-1. Detect the user's language automatically from their query:
-   - English: Respond in clean, crisp, courteous, articulate English.
-   - Bengali (বাংলা) or Banglish (e.g. "zihader email ki", "kemon achen", "skill gulo bolo"): Respond in fluent, polite, natural Bengali (বাংলা).
-   - Arabic (العربية): Respond in fluent, polite Modern Standard Arabic (العربية).
-   - French (Français): Respond in refined, polite French.
-2. Tone: Extremely helpful, polite, concise, technologically sharp, and humble.
-3. Keep answers focused (2 to 4 sentences or a clean bullet list). Do not generate overly verbose essays.
-4. IDENTITY: You are strictly "Ask ZORRO". Never refer to yourself as Gemini or an LLM.
-5. ZERO HALLUCINATION: Never invent credentials, past clients, or technologies outside what is listed above.
+Rules:
+- Answer the user's actual question first. Do not give a canned introduction or generic welcome in response to a specific question.
+- For "জিহাদ কোন স্কুলে পড়ে?", answer directly: "মোহাম্মদ জিহাদ উত্তরা হাই স্কুল অ্যান্ড কলেজ (Uttara High School & College)-এ পড়াশোনা করছেন।"
+- Keep answers concise. Never invent credentials, clients, or facts beyond this knowledge base and relevant live data.
+- Never refer to yourself as Gemini, OpenAI, or an LLM.
 `;
 
     // -------------------------------------------------------------------------
     // 3. GOOGLE GEMINI REST API INTEGRATION
     // -------------------------------------------------------------------------
-    const apiKey = process.env.GEMINI_API_KEY?.trim();
+    const apiKey = process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_API_KEY?.trim();
+    const openAiApiKey = process.env.OPENAI_API_KEY?.trim();
 
     if (apiKey) {
       try {
-        const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+        const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
         const payload = {
           system_instruction: {
             parts: [{ text: systemInstruction }],
           },
           contents: [
-            {
-              role: 'user',
-              parts: [{ text: trimmedMessage }],
-            },
+            ...history.map((item) => ({
+              role: item.role === 'assistant' ? 'model' : 'user',
+              parts: [{ text: item.content }],
+            })),
+            { role: 'user', parts: [{ text: trimmedMessage }] },
           ],
           generationConfig: {
             temperature: 0.7,
@@ -155,6 +153,38 @@ COMMUNICATION & MULTILINGUAL RULES (MANDATORY):
       } catch (geminiError) {
         console.warn('Gemini fetch invocation warning, utilizing grounded NLP:', geminiError);
       }
+    } else if (openAiApiKey) {
+      try {
+        const openAiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${openAiApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              { role: 'system', content: systemInstruction },
+              ...history,
+              { role: 'user', content: trimmedMessage },
+            ],
+            temperature: 0.7,
+            max_tokens: 800,
+          }),
+        });
+
+        if (openAiRes.ok) {
+          const data = await openAiRes.json();
+          const reply = data?.choices?.[0]?.message?.content?.trim();
+          if (reply) return NextResponse.json({ reply });
+        } else {
+          console.warn('OpenAI chat API non-OK status:', openAiRes.status, await openAiRes.text());
+        }
+      } catch (openAiError) {
+        console.warn('OpenAI chat invocation warning, utilizing grounded NLP:', openAiError);
+      }
+    } else {
+      console.error('Ask ZORRO API key missing: set GEMINI_API_KEY, GOOGLE_API_KEY, or OPENAI_API_KEY. Using grounded fallback.');
     }
 
     // -------------------------------------------------------------------------
@@ -166,6 +196,7 @@ COMMUNICATION & MULTILINGUAL RULES (MANDATORY):
     const isBn = language === 'bn' || /[\u0980-\u09FF]/.test(trimmedMessage) || lower.includes('zihad') && (lower.includes('er ') || lower.includes('ki ') || lower.includes('dao'));
     const isAr = language === 'ar' || /[\u0600-\u06FF]/.test(trimmedMessage);
     const isFr = language === 'fr' || lower.includes('bonjour') || lower.includes('comment');
+    const isSchoolQuery = lower.includes('school') || lower.includes('স্কুল') || lower.includes('কোন স্কুল') || lower.includes('school e') || lower.includes('school-e') || lower.includes('uhsc');
 
     let reply = '';
 
@@ -174,12 +205,18 @@ COMMUNICATION & MULTILINGUAL RULES (MANDATORY):
     const isPhoneQuery = lower.includes('phone') || lower.includes('number') || lower.includes('call') || lower.includes('whatsapp') || lower.includes('ফোন') || lower.includes('নম্বর') || lower.includes('هاتف') || lower.includes('واتساب');
     const isGithubQuery = lower.includes('github') || lower.includes('git') || lower.includes('repo') || lower.includes('গিটহাব') || lower.includes('রিপো');
     const isLinkedinQuery = lower.includes('linkedin') || lower.includes('লিঙ্কডইন') || lower.includes('لينكد');
-    const isSkillsQuery = lower.includes('skill') || lower.includes('stack') || lower.includes('tech') || lower.includes('frontend') || lower.includes('backend') || lower.includes('language') || lower.includes('দক্ষতা') || lower.includes('প্রযুক্তি') || lower.includes('مهار');
-    const isProjectsQuery = lower.includes('project') || lower.includes('work') || lower.includes('portfolio') || lower.includes('aether') || lower.includes('cyberpulse') || lower.includes('nexus') || lower.includes('প্রজেক্ট') || lower.includes('কাজ') || lower.includes('مشروع');
+    const isSkillsQuery = lower.includes('skill') || lower.includes('stack') || lower.includes('tech') || lower.includes('frontend') || lower.includes('backend') || lower.includes('python') || lower.includes('language') || lower.includes('দক্ষতা') || lower.includes('প্রযুক্তি') || lower.includes('مهار');
+    const isProjectsQuery = lower.includes('project') || lower.includes('work') || lower.includes('portfolio') || lower.includes('uhsc') || lower.includes('spra') || lower.includes('debate') || lower.includes('shah poran') || lower.includes('bengal merchants') || lower.includes('rice milling') || lower.includes('logistics') || lower.includes('প্রজেক্ট') || lower.includes('কাজ') || lower.includes('مشروع');
     const isEduQuery = lower.includes('education') || lower.includes('degree') || lower.includes('university') || lower.includes('college') || lower.includes('study') || lower.includes('পড়াশোনা') || lower.includes('শিক্ষা') || lower.includes('ডিগ্রি') || lower.includes('تعليم') || lower.includes('جامع');
     const isHireQuery = lower.includes('hire') || lower.includes('available') || lower.includes('rate') || lower.includes('book') || lower.includes('meeting') || lower.includes('হায়ার') || lower.includes('বুকিং') || lower.includes('توظيف');
 
-    if (isEmailQuery) {
+    if (isSchoolQuery) {
+      if (isBn) {
+        reply = 'মোহাম্মদ জিহাদ উত্তরা হাই স্কুল অ্যান্ড কলেজ (Uttara High School & College)-এ পড়াশোনা করছেন।';
+      } else {
+        reply = 'Mohammad Zihad studies at Uttara High School & College (UHSC) and is an SSC candidate for 2027.';
+      }
+    } else if (isEmailQuery) {
       if (isBn) {
         reply = `মোহাম্মদ জিহাদের সাথে সরাসরি যোগাযোগের অফিসিয়াল জিমেইল হলো:\n📧 **${primaryEmail}**\n(বিকল্প ইমেইল: ${altEmail})\n\nএছাড়া আপনি সরাসরি লিঙ্কডইন (${linkedinUrl}) অথবা পোর্টফোলিওর মিটিং বুকিং সেকশন (#contact) থেকেও যোগাযোগ করতে পারেন।`;
       } else if (isAr) {
@@ -219,17 +256,15 @@ COMMUNICATION & MULTILINGUAL RULES (MANDATORY):
       }
     } else if (isProjectsQuery) {
       if (isBn) {
-        reply = `মোহাম্মদ জিহাদের শীর্ষ প্রজেক্টসমূহ:\n১. **AetherSphere:** 3D Zero-G WebGL অপারেটিং স্পেস (${projectsData[0]?.live_url || 'aethersphere.dev'})\n২. **CyberPulse:** রিয়েল-টাইম মাল্টি-মডেল এআই এজেন্ট প্ল্যাটফর্ম\n৩. **NexusFin:** হাইপার-পারফরম্যান্ট অ্যালগরিদমিক ফিনটেক টার্মিনাল\n৪. **NeonArcade:** ওয়েব অডিও সিন্থেসাইজার আর্কেড ল্যাব (১২টি গেম)।`;
-      } else if (isAr) {
-        reply = `أبرز مشاريع محمد جهاد المميزة:\n١. **AetherSphere:** بيئة تشغيل ثلاثية الأبعاد خالية من الجاذبية عبر المتصفح\n٢. **CyberPulse:** منصة عملاء ذكاء اصطناعي متعددة الوسائط بالزمن الحقيقي\n٣. **NexusFin:** بروتوكول تداول مالي عالي الكفاءة\n٤. **NeonArcade:** ألعاب كلاسيكية بمؤثرات صوتية عبر المتصفح.`;
+        reply = 'মোহাম্মদ জিহাদের প্রধান প্রকল্পগুলোর মধ্যে রয়েছে UHSC Debate Club Web Ecosystem, SPRA Enterprise Rice Milling ERP & POS, Shah Poran Agency Organic Agro E-Commerce platform, এবং Bengal Merchants Global Logistics & Sourcing system।';
       } else {
-        reply = `Mohammad Zihad's featured showcase projects include:\n1. **AetherSphere:** Next-gen 3D spatial WebGL operating environment with zero-gravity window physics\n2. **CyberPulse:** Real-time multimodal AI agent orchestration platform\n3. **NexusFin:** High-frequency algorithmic fintech terminal with interactive charting\n4. **NeonArcade:** In-browser Web Audio synthesizer retro gaming lab featuring 12 playable games.`;
+        reply = "Mohammad Zihad's major projects include the UHSC Debate Club Web Ecosystem, SPRA Enterprise Rice Milling ERP & POS, Shah Poran Agency Organic Agro E-Commerce platform, and Bengal Merchants Global Logistics & Sourcing system.";
       }
     } else if (isEduQuery) {
       if (isBn) {
-        reply = `মোহাম্মদ জিহাদের একাডেমিক মাইলফলক:\n🎓 **B.Sc. in Computer Science & Engineering (2022 - 2026)** — University of Engineering & Technology (Dean's Honors List)\n🎖️ **HSC (Science):** GPA 5.0 / 5.0 (Golden Scholar)\n🎖️ **SSC (Science):** GPA 5.0 / 5.0 (Government Laboratory High School)।`;
+        reply = 'মোহাম্মদ জিহাদ উত্তরা হাই স্কুল অ্যান্ড কলেজের (UHSC) শিক্ষার্থী এবং ২০২৭ সালের SSC পরীক্ষার্থী।';
       } else {
-        reply = `Mohammad Zihad's verified academic credentials:\n🎓 **B.Sc. in Computer Science & Engineering (2022 - 2026)** at University of Engineering & Technology (Dean's Honors List)\n🎖️ **Higher Secondary Certificate (HSC):** GPA 5.0 / 5.0 in Natural Sciences & Mathematics\n🎖️ **Secondary School Certificate (SSC):** GPA 5.0 / 5.0 with distinction.`;
+        reply = 'Mohammad Zihad is a student at Uttara High School & College (UHSC) and an SSC candidate for 2027.';
       }
     } else if (isHireQuery) {
       if (isBn) {
@@ -240,13 +275,13 @@ COMMUNICATION & MULTILINGUAL RULES (MANDATORY):
     } else {
       // Dynamic conversational response (not the static intro!)
       if (isBn) {
-        reply = `ধন্যবাদ আপনার বার্তার জন্য! আমি ZORRO—মোহাম্মদ জিহাদের সহকারী এআই। জিহাদের সফটওয়্যার ডেভেলপমেন্ট প্রজেক্ট, প্রযুক্তিগত দক্ষতা (Next.js, Three.js, Node.js), পড়াশোনা বা সরাসরি যোগাযোগ (${primaryEmail}) সংক্রান্ত যেকোনো তথ্য আমি জানাতে পারি। আপনি কী জানতে চান?`;
+        reply = 'এই বিষয়ে আমার কাছে নির্দিষ্ট তথ্য নেই। চাইলে জিহাদের পড়াশোনা, প্রকল্প, দক্ষতা বা যোগাযোগ সম্পর্কে নির্দিষ্ট করে জিজ্ঞেস করুন।';
       } else if (isAr) {
-        reply = `أهلاً بك! أنا ZORRO، المساعد الذكي لمحمد جهاد. يسعدني إفادتك بأي تفاصيل حول مهاراته البرمجية، مشاريعه الرائدة، أو تزويدك ببيانات التواصل المباشرة (${primaryEmail}). كيف يمكنني خدمتك اليوم؟`;
+        reply = 'لا تتوفر لدي معلومة مؤكدة عن ذلك. يمكنني المساعدة بمعلومات محددة عن دراسة جهاد أو مشاريعه أو مهاراته أو بيانات التواصل.';
       } else if (isFr) {
-        reply = `Merci pour votre message ! Je suis ZORRO, l'assistant IA de Mohammad Zihad. Je peux vous renseigner sur ses compétences, ses projets ou vous donner ses coordonnées directes (${primaryEmail}). En quoi puis-je vous aider ?`;
+        reply = 'Je ne dispose pas d’une information vérifiée à ce sujet. Vous pouvez poser une question précise sur ses études, ses projets, ses compétences ou ses coordonnées.';
       } else {
-        reply = `Thank you for reaching out! I am Ask ZORRO, Mohammad Zihad's technical representative. I can answer specific inquiries about his full-stack engineering expertise, 3D WebGL projects, academic background, or provide his direct contact details (${primaryEmail}). What would you like to know?`;
+        reply = 'I do not have a verified detail about that. You can ask about Mohammad’s education, projects, skills, or contact information.';
       }
     }
 

@@ -37,10 +37,15 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
 
     -- About Section Customization
     about_heading VARCHAR(255) DEFAULT 'DIGITAL CRAFTSMANSHIP & SPATIAL ARCHITECTURE',
+    about_headline VARCHAR(255),
     about_philosophy TEXT DEFAULT 'I believe code is craftsmanship. Every interaction, transition, and microsecond of load time is an opportunity to evoke emotion and communicate engineering intent.',
     about_experience_years INT DEFAULT 4,
     about_academic TEXT,
     about_bio TEXT,
+    academic_standing TEXT,
+    bio_paragraph_1 TEXT,
+    eyebrow_text VARCHAR(255),
+    availability_badge VARCHAR(255),
     about_stack TEXT,
 
     -- Contact & Physical Address
@@ -70,6 +75,11 @@ ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS about_academic TEXT;
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS about_bio TEXT;
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS about_stack TEXT;
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS favicon_url TEXT DEFAULT '/favicon.ico';
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS about_headline VARCHAR(255);
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS academic_standing TEXT;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS bio_paragraph_1 TEXT;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS eyebrow_text VARCHAR(255);
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS availability_badge VARCHAR(255);
 
 DO $$
 BEGIN
@@ -143,6 +153,21 @@ CREATE TABLE IF NOT EXISTS public.education (
     order_index INT DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime')
+       AND NOT EXISTS (
+           SELECT 1
+           FROM pg_publication_tables
+           WHERE pubname = 'supabase_realtime'
+             AND schemaname = 'public'
+             AND tablename = 'education'
+       ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.education;
+    END IF;
+END;
+$$;
 
 -- Table 5: Verified Certificates & Credentials
 CREATE TABLE IF NOT EXISTS public.certificates (

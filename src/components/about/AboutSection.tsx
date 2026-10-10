@@ -1,9 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useLanguage } from '@/lib/languageContext';
 import { soundFx } from '@/lib/soundFx';
 import { DEFAULT_EDUCATION, DEFAULT_PROFILE } from '@/lib/supabase';
+import { useSiteSettings } from '@/lib/useSiteSettings';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import type { Education } from '@/types/portfolio';
 import { 
   User, 
   GraduationCap, 
@@ -23,24 +26,53 @@ interface AboutSectionProps {
 
 export function AboutSection({ onOpenCvBuilder }: AboutSectionProps) {
   const { dir } = useLanguage();
-  const [settings, setSettings] = useState<any>(null);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('zihad_portfolio_settings');
-    if (saved) {
-      try {
-        setSettings(JSON.parse(saved));
-      } catch {
-        // ignore
-      }
-    }
-  }, []);
-
-  const aboutHeading = settings?.about_heading || 'ABOUT MOHAMMAD ZIHAD';
-  const aboutBio = settings?.about_bio || settings?.bio || 'Based in Dhaka, Bangladesh, Mohammad Zihad is an independent software engineer and creative full-stack developer. With a rigorous algorithmic foundation formed through early competitive programming, he creates digital experiences that blend architectural reliability with kinetic elegance.';
+  const settings = useSiteSettings(DEFAULT_PROFILE);
+  const [educationList, setEducationList] = React.useState<Education[]>(DEFAULT_EDUCATION);
+  const aboutHeading = settings?.about_headline || settings?.about_heading || 'ABOUT MOHAMMAD ZIHAD';
+  const aboutBio = settings?.bio_paragraph_1 || settings?.about_bio || settings?.bio || DEFAULT_PROFILE.bio;
   const aboutPhilosophy = settings?.about_philosophy || 'His engineering philosophy centers around "code as craftsmanship": prioritizing high frame rates, accessible semantics, clean distributed APIs, and purposeful motion that respects user attention.';
-  const academicStanding = settings?.about_academic || 'B.Sc. CSE (Honors)';
+  const academicStanding = settings?.academic_standing || settings?.about_academic || 'SSC_27';
   const primaryStack = settings?.about_stack || 'Next.js · WebGL · TS';
+
+  React.useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) return;
+    const client = supabase;
+    let active = true;
+
+    const loadEducation = async () => {
+      try {
+        const { data, error } = await client
+          .from('education')
+          .select('*')
+          .order('order_index', { ascending: true });
+
+        if (error) throw error;
+        if (!active) return;
+
+        if (data && data.length > 0) {
+          setEducationList(data as Education[]);
+        } else {
+          setEducationList(DEFAULT_EDUCATION);
+        }
+      } catch (error) {
+        console.error('Education milestones fetch failed:', error);
+        if (active) setEducationList(DEFAULT_EDUCATION);
+      }
+    };
+
+    void loadEducation();
+    const channel = client
+      .channel('about-education-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'education' }, () => {
+        void loadEducation();
+      })
+      .subscribe();
+
+    return () => {
+      active = false;
+      void client.removeChannel(channel);
+    };
+  }, []);
 
   return (
     <section
@@ -191,7 +223,7 @@ export function AboutSection({ onOpenCvBuilder }: AboutSectionProps) {
               </h3>
 
               <div className="space-y-4">
-                {DEFAULT_EDUCATION.map((edu) => (
+                {educationList.map((edu) => (
                   <div
                     key={edu.id}
                     className="flex flex-col sm:flex-row sm:items-start justify-between p-4 rounded-2xl bg-[#141418] border border-white/5 gap-2 group hover:border-[#f5a623]/30 transition-all"

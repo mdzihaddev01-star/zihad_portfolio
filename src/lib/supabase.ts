@@ -49,6 +49,11 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   about_heading: 'DIGITAL CRAFTSMANSHIP & SPATIAL ARCHITECTURE',
   about_philosophy: 'I believe code is craftsmanship. Every interaction, transition, and microsecond of load time is an opportunity to evoke emotion and communicate engineering intent.',
   about_experience_years: 4,
+  about_headline: 'ABOUT MOHAMMAD ZIHAD',
+  academic_standing: 'SSC_27',
+  bio_paragraph_1: 'Based in Dhaka, Bangladesh, Mohammad Zihad is an independent software engineer and creative full-stack developer. With a rigorous algorithmic foundation formed through early competitive programming, he creates digital experiences that blend architectural reliability with kinetic elegance.',
+  eyebrow_text: 'INDEPENDENT DEVELOPER / DIGITAL ARCHITECT',
+  availability_badge: 'Open to work',
 
   // Contact & Address
   contact_email: 'mohammadmdzihaddev01@gmail.com',

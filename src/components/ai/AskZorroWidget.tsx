@@ -78,6 +78,12 @@ export function AskZorroWidget({ isOpen, onToggle }: AskZorroWidgetProps) {
         body: JSON.stringify({
           message: textToSend,
           language,
+          history: messages
+            .filter((message) => message.id !== 'welcome')
+            .map((message) => ({
+              role: message.sender === 'user' ? 'user' : 'assistant',
+              content: message.text,
+            })),
         }),
       });
 

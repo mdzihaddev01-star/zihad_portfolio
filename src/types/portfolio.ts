@@ -32,8 +32,13 @@ export interface SiteSettings {
 
   // About section settings
   about_heading?: string;
+  about_headline?: string;
   about_philosophy?: string;
   about_experience_years?: number;
+  academic_standing?: string;
+  bio_paragraph_1?: string;
+  eyebrow_text?: string;
+  availability_badge?: string;
   about_academic?: string;
   about_bio?: string;
   about_stack?: string;
