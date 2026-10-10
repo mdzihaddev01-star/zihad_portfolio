@@ -281,6 +281,29 @@
   animation: kineticReveal 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+@keyframes shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.animate-shimmer {
+  animation: shimmer 6s ease-in-out infinite;
+}
+
+@keyframes nameBreath {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.hero-name-kinetic {
+  animation: nameBreath 5.5s ease-in-out 0.85s infinite;
+}
+
+.hero-name-gradient {
+  display: inline-block;
+  transform-origin: left center;
+}
+
 /* Fluid Magnetic Cursor Styling with Violet Glow */
 .fluid-cursor-dot {
   position: fixed;
@@ -362,6 +385,9 @@
   }
   .fluid-cursor-dot, .fluid-cursor-ring, .orbital-typography {
     display: none !important;
+    animation: none !important;
+  }
+  .hero-name-kinetic, .hero-name-gradient {
     animation: none !important;
   }
 }

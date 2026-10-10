@@ -187,19 +187,20 @@ export function HeroSection({
             {/* Subtitle in Warm Ochre / Amber-Gold */}
             <div className="flex items-center gap-2.5">
               <span className="w-2 h-2 rounded-full bg-[#f5a623] shadow-[0_0_10px_#f5a623]" />
-              <h2 className="text-xs sm:text-sm font-mono font-bold tracking-[0.2em] text-[#f5a623] uppercase">
+              <h2 className="text-xs font-mono font-semibold tracking-[0.25em] text-amber-400/90 uppercase">
                 {heroSubtitle}
               </h2>
             </div>
 
-            {/* Main Name: Mohammad Zihad in clean, bold, modern geometric sans-serif (crisp white) */}
             <div className="space-y-3">
-              <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[0.95] text-white uppercase font-sans">
-                {heroHeadline}
-              </h1>
+              <div className="hero-name-kinetic">
+                <h1 className="hero-name-gradient max-w-full break-words text-4xl font-black tracking-tight leading-[0.9] text-transparent bg-clip-text bg-gradient-to-r from-white via-amber-200 to-amber-500 bg-[length:200%_auto] drop-shadow-[0_0_35px_rgba(245,158,11,0.25)] transition-transform duration-300 hover:scale-[1.02] hover:drop-shadow-[0_0_45px_rgba(245,158,11,0.45)] sm:text-6xl md:text-7xl lg:text-8xl">
+                  {heroHeadline}
+                </h1>
+              </div>
 
               {/* Editorial Tagline / Bio */}
-              <p className="text-sm sm:text-base md:text-lg text-[#9e9ea8] font-sans max-w-xl leading-relaxed">
+              <p className="max-w-xl font-sans text-base font-normal leading-relaxed text-neutral-300/90 md:text-lg">
                 {heroBio}
               </p>
             </div>
