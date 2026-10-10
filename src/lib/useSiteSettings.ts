@@ -6,6 +6,26 @@ import { supabase } from '@/lib/supabase';
 import { fetchSiteSettings } from '@/lib/siteSettings';
 
 const SETTINGS_STORAGE_KEY = 'zihad_portfolio_settings';
+const IMAGE_SETTING_KEYS = new Set(['logo_url', 'avatar_url', 'hero_portrait_url', 'favicon_url']);
+
+function cacheableSettings(settings: SiteSettings): SiteSettings {
+  const safeSettings = { ...settings };
+  for (const key of IMAGE_SETTING_KEYS) {
+    const imageValue = safeSettings[key as keyof SiteSettings];
+    if (typeof imageValue === 'string' && imageValue.startsWith('data:')) {
+      (safeSettings as Record<string, unknown>)[key] = '';
+    }
+  }
+  return safeSettings;
+}
+
+function saveSettingsCache(settings: SiteSettings) {
+  try {
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(cacheableSettings(settings)));
+  } catch (error) {
+    console.warn('Site settings could not be cached in localStorage:', error);
+  }
+}
 
 export function useSiteSettings(initialSettings?: SiteSettings | null) {
   const [settings, setSettings] = useState<SiteSettings | null>(initialSettings ?? null);
@@ -20,7 +40,11 @@ export function useSiteSettings(initialSettings?: SiteSettings | null) {
       try {
         setSettings(JSON.parse(saved) as SiteSettings);
       } catch {
-        localStorage.removeItem(SETTINGS_STORAGE_KEY);
+        try {
+          localStorage.removeItem(SETTINGS_STORAGE_KEY);
+        } catch {
+          // Storage can be unavailable or over quota.
+        }
       }
     };
 
@@ -29,7 +53,7 @@ export function useSiteSettings(initialSettings?: SiteSettings | null) {
       if (!active || !latestSettings) return;
 
       setSettings(latestSettings);
-      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(latestSettings));
+      saveSettingsCache(latestSettings);
     };
 
     loadCachedSettings();

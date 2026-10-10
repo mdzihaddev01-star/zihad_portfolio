@@ -123,6 +123,60 @@ async function fetchCertificates(): Promise<Certificate[]> {
   })) as Certificate[];
 }
 
+function compressImageFile(file: File, maxDimension: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+
+    image.onload = () => {
+      try {
+        const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+        let width = Math.max(1, Math.round(image.naturalWidth * scale));
+        let height = Math.max(1, Math.round(image.naturalHeight * scale));
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('Unable to initialize image compression.');
+
+        let compressed = '';
+        let quality = 0.8;
+        let sizeBytes = Number.POSITIVE_INFINITY;
+
+        while (sizeBytes > 50 * 1024) {
+          canvas.width = width;
+          canvas.height = height;
+          context.clearRect(0, 0, width, height);
+          context.drawImage(image, 0, 0, width, height);
+          compressed = canvas.toDataURL('image/jpeg', quality);
+          const payload = compressed.slice(compressed.indexOf(',') + 1);
+          sizeBytes = Math.ceil(payload.length * 3 / 4);
+
+          if (sizeBytes <= 50 * 1024) break;
+          if (quality > 0.5) {
+            quality = Math.max(0.5, quality - 0.1);
+          } else if (Math.max(width, height) > 64) {
+            width = Math.max(1, Math.floor(width * 0.85));
+            height = Math.max(1, Math.floor(height * 0.85));
+          } else {
+            break;
+          }
+        }
+
+        resolve(compressed);
+      } catch (error) {
+        reject(error);
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('The selected image could not be read.'));
+    };
+    image.src = objectUrl;
+  });
+}
+
 export default function AdminPage({ 
   defaultTab = 'overview' 
 }: { 
@@ -236,7 +290,7 @@ export default function AdminPage({
     }
 
     const localSettings = localStorage.getItem('zihad_portfolio_settings') || localStorage.getItem('zihad_profile_settings');
-    if (localSettings) {
+    if (localSettings && !isSupabaseConfigured) {
       try {
         setProfile((prev) => ({ ...prev, ...JSON.parse(localSettings) }));
       } catch {}
@@ -246,7 +300,6 @@ export default function AdminPage({
       void fetchSiteSettings().then((settings) => {
         if (!settings) return;
         setProfile((prev) => ({ ...prev, ...settings }));
-        localStorage.setItem('zihad_portfolio_settings', JSON.stringify(settings));
       });
     }
 
@@ -381,11 +434,7 @@ export default function AdminPage({
           savedSettings = data;
         }
 
-        if (savedSettings) {
-          setProfile((prev) => ({ ...prev, ...savedSettings }));
-          localStorage.setItem('zihad_profile_settings', JSON.stringify(savedSettings));
-          localStorage.setItem('zihad_portfolio_settings', JSON.stringify(savedSettings));
-        }
+        if (savedSettings) setProfile((prev) => ({ ...prev, ...savedSettings }));
       } catch (err) {
         console.warn('Site settings upsert error:', err);
         const errorObject = err && typeof err === 'object'
@@ -396,9 +445,8 @@ export default function AdminPage({
         return;
       }
     } else {
-      setProfile((prev) => ({ ...prev, ...settingsPayload }));
-      localStorage.setItem('zihad_profile_settings', JSON.stringify(settingsPayload));
-      localStorage.setItem('zihad_portfolio_settings', JSON.stringify(settingsPayload));
+      window.alert('Supabase is not configured. Settings were not saved.');
+      return;
     }
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new Event('zihad_settings_updated'));
@@ -597,58 +645,44 @@ export default function AdminPage({
   // Image Upload Helper for Settings
   const handleFileUpload = (field: 'avatar_url' | 'favicon_url' | 'logo_url', e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          const imageUrl = reader.result;
-          setProfile((prev) => ({ ...prev, [field]: imageUrl }));
+    if (!file) return;
 
-          void (async () => {
-            if (!isSupabaseConfigured || !supabase) {
-              window.alert('Supabase is not configured. The image preview is local only.');
-              return;
-            }
+    void (async () => {
+      if (!isSupabaseConfigured || !supabase) {
+        throw new Error('Supabase is not configured. The image was not saved.');
+      }
 
-            const updatePayload = {
-              [field]: imageUrl,
-              updated_at: new Date().toISOString(),
-            };
-
-            try {
-              const { data, error } = await supabase
-                .from('site_settings')
-                .update(updatePayload)
-                .eq('id', SITE_SETTINGS_ID)
-                .select('id')
-                .maybeSingle();
-
-              if (error) throw error;
-              if (!data) {
-                const { error: upsertError } = await supabase
-                  .from('site_settings')
-                  .upsert({ id: SITE_SETTINGS_ID, ...updatePayload });
-                if (upsertError) throw upsertError;
-              }
-
-              const updatedProfile = { ...profile, [field]: imageUrl };
-              localStorage.setItem('zihad_profile_settings', JSON.stringify(updatedProfile));
-              localStorage.setItem('zihad_portfolio_settings', JSON.stringify(updatedProfile));
-              window.dispatchEvent(new Event('zihad_settings_updated'));
-              setSettingsSavedToast(true);
-              window.setTimeout(() => setSettingsSavedToast(false), 3000);
-            } catch (error) {
-              console.error(`Supabase ${field} upload save error:`, error);
-              const errorObject = error && typeof error === 'object'
-                ? error as { message?: string; details?: string }
-                : null;
-              window.alert(`Image could not be saved: ${errorObject?.message || errorObject?.details || JSON.stringify(error) || String(error)}`);
-            }
-          })();
-        }
+      const compressedImage = await compressImageFile(file, field === 'favicon_url' ? 128 : 256);
+      const updatePayload = {
+        [field]: compressedImage,
+        updated_at: new Date().toISOString(),
       };
-      reader.readAsDataURL(file);
-    }
+      const { data, error } = await supabase
+        .from('site_settings')
+        .update(updatePayload)
+        .eq('id', SITE_SETTINGS_ID)
+        .select('id')
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) {
+        const { error: upsertError } = await supabase
+          .from('site_settings')
+          .upsert({ id: SITE_SETTINGS_ID, ...updatePayload });
+        if (upsertError) throw upsertError;
+      }
+
+      setProfile((prev) => ({ ...prev, [field]: compressedImage }));
+      window.dispatchEvent(new Event('zihad_settings_updated'));
+      setSettingsSavedToast(true);
+      window.setTimeout(() => setSettingsSavedToast(false), 3000);
+    })().catch((error) => {
+      console.error(`Supabase ${field} upload save error:`, error);
+      const errorObject = error && typeof error === 'object'
+        ? error as { message?: string; details?: string }
+        : null;
+      window.alert(`Image could not be saved: ${errorObject?.message || errorObject?.details || JSON.stringify(error) || String(error)}`);
+    });
   };
 
   // Project Multi-Image Add/Remove
