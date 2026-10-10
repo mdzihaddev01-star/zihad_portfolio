@@ -287,6 +287,7 @@ export default function AdminPage({
           .from('site_settings')
           .upsert({
             ...toSiteSettingsRecord(profile),
+            favicon_url: profile.favicon_url || '/favicon.ico',
             id: SITE_SETTINGS_ID,
             updated_at: new Date().toISOString(),
           });

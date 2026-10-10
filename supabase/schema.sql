@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS about_academic TEXT;
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS about_bio TEXT;
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS about_stack TEXT;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS favicon_url TEXT DEFAULT '/favicon.ico';
 
 DO $$
 BEGIN

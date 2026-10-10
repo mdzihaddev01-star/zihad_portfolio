@@ -21,6 +21,9 @@ export const metadata: Metadata = {
     'Dhaka Bangladesh'
   ],
   authors: [{ name: 'MOHAMMAD ZIHAD' }],
+  icons: {
+    icon: [{ url: '/api/favicon', sizes: 'any' }],
+  },
   openGraph: {
     title: 'MOHAMMAD ZIHAD — 02 / CINEMATIC DEVELOPER HERO',
     description: 'Creative Full-Stack Developer · Software Engineer · Digital Architect',

@@ -128,8 +128,8 @@ function normalizeProject(project: Partial<Project>, index: number): Project {
 
 export function ProjectsSection() {
   const { t } = useLanguage();
-  const [projects, setProjects] = useState<Project[]>(isSupabaseConfigured ? [] : DEFAULT_PROJECTS);
-  const [isLoadingProjects, setIsLoadingProjects] = useState(isSupabaseConfigured);
+  const [projects, setProjects] = useState<Project[]>(DEFAULT_PROJECTS);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const [projectLoadError, setProjectLoadError] = useState('');
   const [activeFilter, setActiveFilter] = useState<'All' | 'WebGL' | 'AI' | 'Fintech' | 'Creative'>('All');
   const [codeInspectorMode, setCodeInspectorMode] = useState<Record<string, boolean>>({});
